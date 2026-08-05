@@ -178,17 +178,34 @@ int show_received_query(ui_context_t *ui)
                             printf("[查询] 验证成功，查询 %s 的快件\n", phone);
                             lcd_show_menu(&ui->lcd, "received_query.jpg");
 
-                            locker_node_t *locker = locker_find_by_phone(ui_get_locker_head(), phone);
-                            if (locker != NULL && locker->loc_data == LOCKER_OCCUPIED)
+                            locker_node_t *head = ui_get_locker_head();
+                            locker_node_t *node = head;
+                            locker_node_t *first = NULL;
+                            int pkg_count = 0;
+
+                            while (node != NULL)
                             {
+                                if (node->loc_data == LOCKER_OCCUPIED &&
+                                    strcmp(node->small_phone, phone) == 0)
+                                {
+                                    if (first == NULL)
+                                        first = node;
+                                    pkg_count++;
+                                    printf("[查询] 包裹 #%d: 柜号 %s, 取件码 %s\n",
+                                           pkg_count, node->locker_ID, node->locker_getID);
+                                }
+                                node = node->next;
+                            }
+
+                            if (pkg_count > 0)
+                            {
+                                printf("[查询] 手机号 %s 共有 %d 个快件\n", phone, pkg_count);
                                 lcd_show_jpg(&ui->lcd, "resource/menu_pic/jpg/had_received.jpg", 488, 43);
                                 lcd_show_jpg(&ui->lcd, "resource/menu_pic/jpg/takeout_code.jpg", 0, 0);
-                                lcd_show_digit(&ui->lcd, locker->takeout_code[0] - '0', 457, 346);
-                                lcd_show_digit(&ui->lcd, locker->takeout_code[1] - '0', 457, 276);
-                                lcd_show_digit(&ui->lcd, locker->takeout_code[2] - '0', 457, 206);
-                                lcd_show_digit(&ui->lcd, locker->takeout_code[3] - '0', 457, 136);
-                                printf("[查询] 手机号 %s 有快件: 柜号 %d, 取件码 %s\n",
-                                       phone, locker->loc_id, locker->takeout_code);
+                                lcd_show_digit(&ui->lcd, first->locker_getID[0] - '0', 457, 346);
+                                lcd_show_digit(&ui->lcd, first->locker_getID[1] - '0', 457, 276);
+                                lcd_show_digit(&ui->lcd, first->locker_getID[2] - '0', 457, 206);
+                                lcd_show_digit(&ui->lcd, first->locker_getID[3] - '0', 457, 136);
                             }
                             else
                             {

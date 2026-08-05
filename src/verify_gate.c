@@ -270,8 +270,7 @@ static char *vg_http_request(const char *method, const char *url_path,
     return response;
 }
 
-int vg_create_pickup(const char *phone, const char *box_id,
-                     char *out_token, char *out_url)
+int vg_create_pickup(char *out_token, char *out_url)
 {
     static unsigned int counter = 0;
     unsigned int seed;
@@ -283,9 +282,6 @@ int vg_create_pickup(const char *phone, const char *box_id,
 
     out_token[0] = '\0';
     out_url[0] = '\0';
-
-    (void)phone;
-    (void)box_id;
 
     seed = (unsigned int)time(NULL) + (++counter);
 

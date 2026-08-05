@@ -24,21 +24,15 @@ typedef struct
 /**************************************************************************
  *
  *   @brief : 创建取件任务（存件时调用）
- *   @arg   : phone         收件人手机号（可为空，则不绑定）
- *   @arg   : box_id        储物柜编号（可为空）
  *   @arg   : out_token     输出取件令牌（UUID），需至少 VG_TOKEN_LEN 字节
  *   @arg   : out_url       输出二维码对应的网页 URL，需至少 VG_URL_LEN 字节
  *
  *   @retval: 0  成功
  *           -1 参数错误
- *           -2 网络请求失败
- *           -3 响应解析失败
- *           -4 服务器返回错误
- *   @note  : 调用 Vercel 端 POST /api/pickup，令牌默认 30 分钟有效
+ *   @note  : 生成随机 UUID 作为取件令牌，令牌默认 30 分钟有效
  *
  ***************************************************************************/
-int vg_create_pickup(const char *phone, const char *box_id,
-                     char *out_token, char *out_url);
+int vg_create_pickup(char *out_token, char *out_url);
 
 /**************************************************************************
  *

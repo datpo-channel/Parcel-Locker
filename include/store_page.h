@@ -24,11 +24,12 @@ int show_store_info(ui_context_t *ui, char *phone, char *code,
  *   @brief : 存件成功后显示成功页面，等待用户触摸后返回
  *   @arg   : ui    指向 ui_context_t 结构体的指针
  *
- *   @retval: 无
+ *   @retval: 1  继续存件
+ *            0  返回首页（或超时）
  *   @note  : 显示 send_success.jpg 背景
  *
  ***************************************************************************/
-void show_send_success(ui_context_t *ui);
+int show_send_success(ui_context_t *ui);
 
 /**************************************************************************
  *

@@ -70,16 +70,20 @@ static int fetch_sms_password(char *password, size_t password_size)
         return -1;
     }
 
-    snprintf(request, sizeof(request),
-             "POST /sms_key HTTP/1.1\r\n"
-             "Host: %s:%d\r\n"
-             "Content-Type: application/json\r\n"
-             "Content-Length: %zu\r\n"
-             "\r\n"
-             "{\"token\":\"%s\"}",
-             KEY_SERVER_HOST, KEY_SERVER_PORT,
-             strlen(KEY_SERVER_TOKEN) + 12,   /* {"token":""} = 12 chars */
-             KEY_SERVER_TOKEN);
+    {
+        char json_body[256];
+        int body_len = snprintf(json_body, sizeof(json_body),
+                                "{\"token\":\"%s\"}", KEY_SERVER_TOKEN);
+        snprintf(request, sizeof(request),
+                 "POST /sms_key HTTP/1.1\r\n"
+                 "Host: %s:%d\r\n"
+                 "Content-Type: application/json\r\n"
+                 "Content-Length: %d\r\n"
+                 "\r\n"
+                 "%s",
+                 KEY_SERVER_HOST, KEY_SERVER_PORT,
+                 body_len, json_body);
+    }
 
     if (write(sockfd, request, strlen(request)) < 0)
     {
@@ -105,6 +109,20 @@ static int fetch_sms_password(char *password, size_t password_size)
         return -1;
     }
     body += 4;
+
+    if (strncmp(response, "HTTP/1.", 7) == 0)
+    {
+        const char *space = strchr(response, ' ');
+        if (space != NULL)
+        {
+            int status_code = atoi(space + 1);
+            if (status_code != 200)
+            {
+                printf("[SMS_KEY] server returned HTTP %d\n", status_code);
+                return -1;
+            }
+        }
+    }
 
     p = strstr(body, "\"password\":\"");
     if (p == NULL)

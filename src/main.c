@@ -167,7 +167,7 @@ int main(void)
                 char pickup_url[VG_URL_LEN];
                 char qr_path[64] = "resource/qrcode/pickup_qr.jpg";
 
-                vg_create_pickup(NULL, NULL, g_pickup_token, pickup_url);
+                vg_create_pickup(g_pickup_token, pickup_url);
                 generate_qr(pickup_url, qr_path, 3, 2, 85);
                 printf("[扫码取件] 二维码已生成，token: %s\n", g_pickup_token);
 
@@ -275,42 +275,47 @@ int main(void)
             printf("用户选择: 存件\n");
             {
                 int user_login_retry = 0;
+                int logged_in = 0;
 
                 while (user_login_retry < MAX_RETRY_COUNT)
                 {
-                    ret = show_user_login(&ui, phone);
-
-                    if (ret == RET_TIMEOUT)
+                    if (!logged_in)
                     {
-                        printf("[超时] 用户登录超时，返回主页\n");
-                        break;
-                    }
+                        ret = show_user_login(&ui, phone);
 
-                    if (ret == RET_LOGIN_CANCEL)
-                    {
-                        printf("用户取消登录，返回主页\n");
-                        break;
-                    }
-
-                    if (ret == RET_LOGIN_FAILED)
-                    {
-                        user_login_retry++;
-                        if (user_login_retry >= MAX_RETRY_COUNT)
+                        if (ret == RET_TIMEOUT)
                         {
-                            printf("[错误] 用户登录流程已重试%d次，验证码多次错误，返回主页\n", MAX_RETRY_COUNT);
+                            printf("[超时] 用户登录超时，返回主页\n");
                             break;
                         }
-                        printf("验证码错误次数过多（第%d次登录流程），请重新开始\n", user_login_retry + 1);
-                        continue;
-                    }
 
-                    if (ret != 0)
-                    {
-                        printf("未知登录错误: %d\n", ret);
-                        break;
-                    }
+                        if (ret == RET_LOGIN_CANCEL)
+                        {
+                            printf("用户取消登录，返回主页\n");
+                            break;
+                        }
 
-                    printf("普通用户登录成功，手机号: %s\n", phone);
+                        if (ret == RET_LOGIN_FAILED)
+                        {
+                            user_login_retry++;
+                            if (user_login_retry >= MAX_RETRY_COUNT)
+                            {
+                                printf("[错误] 用户登录流程已重试%d次，验证码多次错误，返回主页\n", MAX_RETRY_COUNT);
+                                break;
+                            }
+                            printf("验证码错误次数过多（第%d次登录流程），请重新开始\n", user_login_retry + 1);
+                            continue;
+                        }
+
+                        if (ret != 0)
+                        {
+                            printf("未知登录错误: %d\n", ret);
+                            break;
+                        }
+
+                        printf("普通用户登录成功，手机号: %s\n", phone);
+                        logged_in = 1;
+                    }
 
                     char custom_code[5];
                     int box_size = 0;
@@ -358,7 +363,13 @@ int main(void)
                     if (pay_ret == 1)
                     {
                         printf("[存件] 用户已支付，显示成功页面\n");
-                        show_send_success(&ui);
+                        int succ_ret = show_send_success(&ui);
+                        if (succ_ret == 1)
+                        {
+                            printf("[存件] 用户选择继续存件\n");
+                            continue;
+                        }
+                        printf("[存件] 用户选择返回首页\n");
                     }
                     else
                     {
@@ -379,46 +390,52 @@ int main(void)
             printf("用户选择: 登录快递员\n");
             {
                 int courier_login_retry = 0;
+                int logged_in = 0;
 
                 while (courier_login_retry < MAX_RETRY_COUNT)
                 {
-                    ret = show_sendman_login(&ui, phone);
-
-                    if (ret == RET_TIMEOUT)
+                    if (!logged_in)
                     {
-                        printf("[超时] 快递员登录超时，返回主页\n");
-                        break;
-                    }
+                        ret = show_sendman_login(&ui, phone);
 
-                    if (ret == RET_LOGIN_CANCEL)
-                    {
-                        printf("快递员取消登录，返回主页\n");
-                        break;
-                    }
-
-                    if (ret == RET_LOGIN_FAILED)
-                    {
-                        courier_login_retry++;
-                        if (courier_login_retry >= MAX_RETRY_COUNT)
+                        if (ret == RET_TIMEOUT)
                         {
-                            printf("[错误] 快递员登录流程已重试%d次，验证码多次错误，返回主页\n", MAX_RETRY_COUNT);
+                            printf("[超时] 快递员登录超时，返回主页\n");
                             break;
                         }
-                        printf("验证码错误次数过多（第%d次登录流程），请重新开始\n", courier_login_retry + 1);
-                        continue;
-                    }
 
-                    if (ret != 0)
-                    {
-                        printf("未知登录错误: %d\n", ret);
-                        break;
+                        if (ret == RET_LOGIN_CANCEL)
+                        {
+                            printf("快递员取消登录，返回主页\n");
+                            break;
+                        }
+
+                        if (ret == RET_LOGIN_FAILED)
+                        {
+                            courier_login_retry++;
+                            if (courier_login_retry >= MAX_RETRY_COUNT)
+                            {
+                                printf("[错误] 快递员登录流程已重试%d次，验证码多次错误，返回主页\n", MAX_RETRY_COUNT);
+                                break;
+                            }
+                            printf("验证码错误次数过多（第%d次登录流程），请重新开始\n", courier_login_retry + 1);
+                            continue;
+                        }
+
+                        if (ret != 0)
+                        {
+                            printf("未知登录错误: %d\n", ret);
+                            break;
+                        }
+
+                        printf("用户登录快递员成功！手机号为: %s\n", phone);
+                        logged_in = 1;
                     }
 
                     char custom_code[5];
                     int box_size = 0;
                     int duration = 0;
 
-                    printf("用户登录快递员成功！手机号为: %s\n", phone);
                     ret = show_store_info(&ui, phone, custom_code, &box_size, &duration);
                     if (ret == RET_TIMEOUT)
                     {
@@ -457,7 +474,13 @@ int main(void)
                     printf("已分配储物柜为: %s, 取件码为: %s\n",
                            locker->locker_ID, custom_code);
 
-                    show_send_success(&ui);
+                    int succ_ret = show_send_success(&ui);
+                    if (succ_ret == 1)
+                    {
+                        printf("[存件] 快递员选择继续存件\n");
+                        continue;
+                    }
+                    printf("[存件] 快递员选择返回首页\n");
 
                     courier_login_retry = 0;
                     break;

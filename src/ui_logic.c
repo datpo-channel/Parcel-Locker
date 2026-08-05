@@ -35,28 +35,6 @@ void generate_random_code(char *code, int length)
 
 /**************************************************************************
  *
- *   @brief : 生成随机验证码整数数组
- *   @arg   : digits  输出数组
- *   @arg   : length  数组长度 (1-6)
- *
- *   @retval: 无
- *
- ***************************************************************************/
-void generate_random_code_int(int *digits, int length)
-{
-    if (digits == NULL || length <= 0 || length > 6)
-    {
-        return;
-    }
-
-    for (int i = 0; i < length; i++)
-    {
-        digits[i] = rand() % 10;
-    }
-}
-
-/**************************************************************************
- *
  *   @brief : 初始化 UI 上下文
  *   @arg   : ui       指向 ui_context_t 结构体的指针
  *   @arg   : touch_fd 触摸屏设备文件描述符

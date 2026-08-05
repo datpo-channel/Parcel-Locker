@@ -19,14 +19,13 @@
  *   @arg   : phone     已输入的手机号字符串
  *   @arg   : phone_len 已输入的手机号长度
  *   @arg   : code      已输入的取件码数字数组
- *   @arg   : code_len  已输入的取件码长度
  *   @arg   : step      当前步骤（1=手机号, 2=取件码）
  *
  *   @retval: 无
  *
  ***************************************************************************/
 static void redraw_store_info(ui_context_t *ui, const char *phone, int phone_len,
-                              const int *code, int code_len, int step)
+                              const int *code, int step)
 {
     const int phone_x = 457;
     const int phone_y = 346;
@@ -119,7 +118,7 @@ int show_store_info(ui_context_t *ui, char *phone, char *code,
                     {
                         phone_len--;
                         phone_digits[phone_len] = 0;
-                        redraw_store_info(ui, "", 0, code_digits, 0, step);
+                        redraw_store_info(ui, "", 0, code_digits, step);
                         for (int i = 0; i < phone_len; i++)
                         {
                             lcd_show_digit(&ui->lcd, phone_digits[i], 457, 346 - i * 70);
@@ -149,7 +148,7 @@ int show_store_info(ui_context_t *ui, char *phone, char *code,
                     {
                         code_len--;
                         code_digits[code_len] = 0;
-                        redraw_store_info(ui, "", 0, code_digits, 0, 2);
+                        redraw_store_info(ui, "", 0, code_digits, 2);
                         for (int i = 0; i < phone_len; i++)
                         {
                             lcd_show_digit(&ui->lcd, phone_digits[i], 457, 346 - i * 70);
@@ -273,18 +272,19 @@ int show_pay_info(ui_context_t *ui)
  *   @brief : 存件成功页面
  *   @arg   : ui  指向 ui_context_t 结构体的指针
  *
- *   @retval: 无
+ *   @retval: 1  继续存件
+ *            0  返回首页（或超时）
  *   @note  : 显示存件成功画面，用户可选择"继续存件"或"返回首页"
  *
  ***************************************************************************/
-void show_send_success(ui_context_t *ui)
+int show_send_success(ui_context_t *ui)
 {
     int ts_x, ts_y;
     time_t start_time;
 
     if (ui == NULL)
     {
-        return;
+        return 0;
     }
 
     lcd_show_menu(&ui->lcd, "send_success.jpg");
@@ -301,7 +301,7 @@ void show_send_success(ui_context_t *ui)
         if ((time(NULL) - start_time) >= PAGE_TIMEOUT_SEC)
         {
             printf("[超时] 存件成功页面显示超时(%d秒)，自动返回主页\n", PAGE_TIMEOUT_SEC);
-            return;
+            return 0;
         }
 
         if (touchpad_get_coord(&ui->touch, &ts_x, &ts_y) == 0)
@@ -309,12 +309,12 @@ void show_send_success(ui_context_t *ui)
             if (ts_x >= 663 && ts_x <= 711 && ts_y >= 247 && ts_y <= 441)
             {
                 printf("[存件成功] 继续存件\n");
-                return;
+                return 1;
             }
             if (ts_x >= 664 && ts_x <= 711 && ts_y >= 38 && ts_y <= 230)
             {
                 printf("[存件成功] 返回首页\n");
-                return;
+                return 0;
             }
         }
         usleep(50000);
