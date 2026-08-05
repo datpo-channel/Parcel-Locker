@@ -42,7 +42,7 @@ mail_box_pic/
 │   ├── pickup_monitor.c    # 扫码监控
 │   ├── verify_gate.c       # 验证网关
 │   └── ...
-├── tencent-scf/        # 云端验证服务（部署到云服务器）
+├── ali-scf/        # 云端验证服务（部署到云服务器）
 │   ├── index.js            # Node.js HTTP 服务
 │   ├── sms_config.json     # 短信 API 密钥配置
 │   └── package.json
