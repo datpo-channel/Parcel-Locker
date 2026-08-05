@@ -97,7 +97,7 @@ make deploy
 ```
 
 ### 云端服务
-请先将tencent-scf中的文件上传至服务器的/opt/mail-box-api路径下
+请先将ali-scf中的文件上传至服务器的/opt/mail-box-api路径下
 ```bash
 cd tencent-scf
 npm install
