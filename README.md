@@ -124,7 +124,7 @@ curl -X POST http://服务器IP:3000/sms_key \
   -d '{"token":"mailbox_internal_token_2024"}'
 
 # 响应
-{"ok":true,"password":"5c8bf530a9034fdb274f4387f5e06e88"}
+{"ok":true,"password":"[你的API密钥]"}
 ```
 
 ### POST /api/verify
@@ -139,7 +139,7 @@ curl -X POST http://服务器IP:3000/sms_key \
 
 ### 短信密钥
 
-短信 API 密码存储在云端 `sms_config.json`，不随源码提交到仓库：
+短信 API 密码存储在云端 `sms_config.json`
 
 ```json
 {
