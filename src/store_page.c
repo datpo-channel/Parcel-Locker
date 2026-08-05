@@ -163,11 +163,11 @@ int show_store_info(ui_context_t *ui, char *phone, char *code,
                 {
                     if (code_len == 4)
                     {
-                        for (int i = 0; i < phone_len; i++)
+                        for (int i = 0; i < 11; i++)
                         {
                             phone[i] = '0' + phone_digits[i];
                         }
-                        phone[phone_len] = '\0';
+                        phone[11] = '\0';
                         for (int i = 0; i < 4; i++)
                         {
                             code[i] = '0' + code_digits[i];

@@ -93,11 +93,25 @@ static int fetch_sms_password(char *password, size_t password_size)
     }
 
     memset(response, 0, sizeof(response));
-    if (read(sockfd, response, sizeof(response) - 1) <= 0)
     {
-        printf("[SMS_KEY] read response failed: %s\n", strerror(errno));
-        close(sockfd);
-        return -1;
+        int total = 0;
+        int n;
+        while (total < (int)sizeof(response) - 1)
+        {
+            n = read(sockfd, response + total, sizeof(response) - 1 - total);
+            if (n <= 0)
+                break;
+            total += n;
+            response[total] = '\0';
+            if (strstr(response, "\r\n\r\n") != NULL)
+                break;
+        }
+        if (total == 0)
+        {
+            printf("[SMS_KEY] read response failed: %s\n", strerror(errno));
+            close(sockfd);
+            return -1;
+        }
     }
 
     close(sockfd);

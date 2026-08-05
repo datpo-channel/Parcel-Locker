@@ -126,10 +126,8 @@ int show_received_query(ui_context_t *ui)
                             }
                             else
                             {
-                                printf("[查询] 短信发送失败(ret=%d)，使用 demo 验证码\n", sms_ret);
-                                safe_strcpy(g_last_sms_phone, sizeof(g_last_sms_phone), phone);
-                                safe_strcpy(g_last_sms_code, sizeof(g_last_sms_code), DEMO_CODE);
-                                g_last_sms_time = time(NULL);
+                                printf("[查询] 短信发送失败(ret=%d)，请稍后重试\n", sms_ret);
+                                return RET_LOGIN_FAILED;
                             }
                         }
                         else

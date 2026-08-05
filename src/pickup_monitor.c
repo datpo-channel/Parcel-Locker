@@ -42,7 +42,14 @@ static void *pickup_monitor_thread(void *arg)
                 {
                     printf("[监控] 检测到扫码取件验证通过，柜号:%s\n",
                            node->locker_ID);
-                    g_pickup_notify_flag = 1;
+                    char vphone[VG_PHONE_LEN] = {0};
+                    int cr = vg_consume_ticket(node->pickup_token, vphone, sizeof(vphone));
+                    if (cr == 1)
+                    {
+                        locker_clean_by_id(head, node->locker_ID);
+                        printf("[监控] 已自动开箱，手机:%s\n", vphone[0] ? vphone : "未知");
+                        g_pickup_notify_flag = 1;
+                    }
                     break;
                 }
             }

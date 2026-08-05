@@ -21,8 +21,10 @@ void safe_strcpy(char *dst, size_t dst_size, const char *src);
  *   @arg   : ui    指向 ui_context_t 结构体的指针
  *   @arg   : phone 输出缓冲区，用于存储输入的手机号
  *
- *   @retval: 成功返回 0，失败返回 -1
- *   @note  : 内部调用 show_login_common，使用快递员配置
+ *   @retval: RET_TAKEOUT_OK    验证成功
+ *            RET_TIMEOUT       页面超时
+ *            RET_LOGIN_CANCEL  用户取消
+ *            RET_LOGIN_FAILED  验证码错误次数超限
  *
  ***************************************************************************/
 int show_sendman_login(ui_context_t *ui, char *phone);
@@ -33,8 +35,10 @@ int show_sendman_login(ui_context_t *ui, char *phone);
  *   @arg   : ui    指向 ui_context_t 结构体的指针
  *   @arg   : phone 输出缓冲区，用于存储输入的手机号
  *
- *   @retval: 成功返回 0，失败返回 -1
- *   @note  : 内部调用 show_login_common，使用普通用户配置
+ *   @retval: RET_TAKEOUT_OK    验证成功
+ *            RET_TIMEOUT       页面超时
+ *            RET_LOGIN_CANCEL  用户取消
+ *            RET_LOGIN_FAILED  验证码错误次数超限
  *
  ***************************************************************************/
 int show_user_login(ui_context_t *ui, char *phone);

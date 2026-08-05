@@ -348,7 +348,6 @@ int vg_query_status(const char *token, vg_status_t *status)
     {
         status->status = result;
         json_extract_string(resp, "phone", status->verified_phone, VG_PHONE_LEN);
-        json_extract_string(resp, "verifiedPhone", status->verified_phone, VG_PHONE_LEN);
         status->verified_at = json_extract_long(resp, "verifiedAt");
     }
 

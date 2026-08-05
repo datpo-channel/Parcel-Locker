@@ -64,10 +64,12 @@ static int check_scan_pickup(ui_context_t *ui)
             }
             if (opened > 0)
             {
+                vg_consume_ticket(g_pickup_token, NULL, 0);
                 show_takeout_success(ui);
                 memset(g_pickup_token, 0, sizeof(g_pickup_token));
                 return 1;
             }
+            vg_consume_ticket(g_pickup_token, NULL, 0);
             printf("[扫码取件] 手机号 %s 无匹配包裹\n", status.verified_phone);
             memset(g_pickup_token, 0, sizeof(g_pickup_token));
             return 0;
@@ -155,7 +157,10 @@ int main(void)
         {
             ui_clear_pickup_notify();
             printf("[扫码取件] 主菜单检测到验证完成，执行开箱\n");
-            check_scan_pickup(&ui);
+            if (!check_scan_pickup(&ui))
+            {
+                show_takeout_success(&ui);
+            }
             continue;
         }
 
@@ -190,7 +195,10 @@ int main(void)
                     {
                         ui_clear_pickup_notify();
                         printf("[扫码取件] 取件界面检测到验证完成，执行开箱\n");
-                        check_scan_pickup(&ui);
+                        if (!check_scan_pickup(&ui))
+                        {
+                            show_takeout_success(&ui);
+                        }
                         break;
                     }
 
@@ -212,7 +220,10 @@ int main(void)
                         {
                             ui_clear_pickup_notify();
                             printf("[扫码取件] 查询界面检测到验证完成，执行开箱\n");
-                            check_scan_pickup(&ui);
+                            if (!check_scan_pickup(&ui))
+                            {
+                                show_takeout_success(&ui);
+                            }
                             break;
                         }
                         else if (query_ret == RET_QUERY_OK)
@@ -224,11 +235,6 @@ int main(void)
                             printf("用户返回取件界面\n");
                         }
 
-                        continue;
-                    }
-
-                    if (ret != RET_TAKEOUT_OK)
-                    {
                         continue;
                     }
 
@@ -359,6 +365,12 @@ int main(void)
                     printf("已分配储物柜为: %s, 取件码为: %s\n",
                            locker->locker_ID, custom_code);
 
+                    {
+                        char pickup_url[VG_URL_LEN];
+                        vg_create_pickup(locker->pickup_token, pickup_url);
+                        printf("[存件] 已生成取件令牌: %s\n", locker->pickup_token);
+                    }
+
                     int pay_ret = show_pay_info(&ui);
                     if (pay_ret == 1)
                     {
@@ -367,6 +379,7 @@ int main(void)
                         if (succ_ret == 1)
                         {
                             printf("[存件] 用户选择继续存件\n");
+                            phone[0] = '\0';
                             continue;
                         }
                         printf("[存件] 用户选择返回首页\n");
@@ -474,10 +487,17 @@ int main(void)
                     printf("已分配储物柜为: %s, 取件码为: %s\n",
                            locker->locker_ID, custom_code);
 
+                    {
+                        char pickup_url[VG_URL_LEN];
+                        vg_create_pickup(locker->pickup_token, pickup_url);
+                        printf("[存件] 已生成取件令牌: %s\n", locker->pickup_token);
+                    }
+
                     int succ_ret = show_send_success(&ui);
                     if (succ_ret == 1)
                     {
                         printf("[存件] 快递员选择继续存件\n");
+                        phone[0] = '\0';
                         continue;
                     }
                     printf("[存件] 快递员选择返回首页\n");
