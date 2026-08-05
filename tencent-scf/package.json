@@ -1,0 +1,9 @@
+{
+    "name": "mail-box-verify",
+    "version": "1.0.0",
+    "description": "智能快递柜验证API",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js"
+    }
+}
