@@ -44,7 +44,7 @@ mail_box_pic/
 │   └── ...
 ├── tencent-scf/        # 云端验证服务（部署到云服务器）
 │   ├── index.js            # Node.js HTTP 服务
-│   ├── sms_config.json     # 短信 API 密钥配置（不提交到仓库）
+│   ├── sms_config.json     # 短信 API 密钥配置
 │   └── package.json
 ├── resource/           # 图片资源
 │   ├── menu_pic/           # 界面背景图
