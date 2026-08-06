@@ -52,7 +52,7 @@ int show_received_query(ui_context_t *ui)
 
     memset(phone_digits, 0, sizeof(phone_digits));
     memset(code_digits, 0, sizeof(code_digits));
-    lcd_show_menu(&ui->lcd, "received_query.jpg");
+    lcd_show_menu(&ui->lcd, "received.jpg");
     start_time = time(NULL);
 
     while (1)
@@ -91,7 +91,7 @@ int show_received_query(ui_context_t *ui)
                     {
                         phone_len--;
                         phone_digits[phone_len] = 0;
-                        lcd_show_menu(&ui->lcd, "received_query.jpg");
+                        lcd_show_menu(&ui->lcd, "received.jpg");
                         for (int i = 0; i < phone_len; i++)
                         {
                             lcd_show_digit(&ui->lcd, phone_digits[i], 457, 346 - i * 70);
@@ -108,7 +108,7 @@ int show_received_query(ui_context_t *ui)
                         }
                         phone[11] = '\0';
 
-                        lcd_show_menu(&ui->lcd, "received_query_button.jpg");
+                        lcd_show_menu(&ui->lcd, "received.jpg");
                         step = 2;
                         printf("[查询] 手机号: %s, 进入验证码输入\n", phone);
 
@@ -154,7 +154,7 @@ int show_received_query(ui_context_t *ui)
                     {
                         code_len--;
                         code_digits[code_len] = 0;
-                        lcd_show_menu(&ui->lcd, "received_query_button.jpg");
+                        lcd_show_menu(&ui->lcd, "received.jpg");
                         for (int i = 0; i < code_len; i++)
                         {
                             lcd_show_digit(&ui->lcd, code_digits[i], 349, 346 - i * 70);
@@ -174,7 +174,7 @@ int show_received_query(ui_context_t *ui)
                         if (verify_phone_code(phone, input_code))
                         {
                             printf("[查询] 验证成功，查询 %s 的快件\n", phone);
-                            lcd_show_menu(&ui->lcd, "received_query.jpg");
+                            lcd_show_menu(&ui->lcd, "received.jpg");
 
                             locker_node_t *head = ui_get_locker_head();
                             locker_node_t *node = head;
@@ -242,7 +242,7 @@ int show_received_query(ui_context_t *ui)
                             }
                             code_len = 0;
                             memset(code_digits, 0, sizeof(code_digits));
-                            lcd_show_menu(&ui->lcd, "received_query_button.jpg");
+                            lcd_show_menu(&ui->lcd, "received.jpg");
                         }
                     }
                 }

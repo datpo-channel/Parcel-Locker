@@ -207,7 +207,7 @@ int show_pay_info(ui_context_t *ui)
     }
 
     memset(code_digits, 0, sizeof(code_digits));
-    lcd_show_menu(&ui->lcd, "save_pay.jpg");
+    lcd_show_menu(&ui->lcd, "pay_info.jpg");
     start_time = time(NULL);
 
     while (1)
@@ -240,7 +240,7 @@ int show_pay_info(ui_context_t *ui)
                 {
                     code_len--;
                     code_digits[code_len] = 0;
-                    lcd_show_menu(&ui->lcd, "save_pay.jpg");
+                    lcd_show_menu(&ui->lcd, "pay_info.jpg");
                     for (int i = 0; i < code_len; i++)
                     {
                         lcd_show_digit(&ui->lcd, code_digits[i], 349, 346 - i * 70);

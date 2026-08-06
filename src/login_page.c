@@ -223,7 +223,7 @@ static int show_login_common(ui_context_t *ui, const char *login_jpg,
  ***************************************************************************/
 int show_sendman_login(ui_context_t *ui, char *phone)
 {
-    return show_login_common(ui, "sendman_login.jpg", "sendman_button.jpg", phone);
+    return show_login_common(ui, "sendman_login.jpg", "sendman_login.jpg", phone);
 }
 
 /**************************************************************************
@@ -240,7 +240,7 @@ int show_sendman_login(ui_context_t *ui, char *phone)
  ***************************************************************************/
 int show_user_login(ui_context_t *ui, char *phone)
 {
-    return show_login_common(ui, "user_login.jpg", "user_button.jpg", phone);
+    return show_login_common(ui, "saveuser_login.jpg", "saveuser_login.jpg", phone);
 }
 
 /**************************************************************************
