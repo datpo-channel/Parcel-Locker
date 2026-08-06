@@ -19,31 +19,63 @@
 
 /**************************************************************************
  *
- *   @brief : 快件查询界面
- *   @arg   : ui  指向 ui_context_t 结构体的指针
+ *   @brief : 重绘查询界面，恢复已输入的数字显示
  *
- *   @retval: RET_QUERY_OK     查询完成
- *            RET_QUERY_BACK   用户返回
- *            RET_TIMEOUT      页面超时
- *            RET_SCAN_PICKUP  后台检测到扫码取件
- *            RET_LOGIN_FAILED 验证码错误次数超限
- *   @note  : 分两步：输入手机号 → 短信验证 → 显示快件状态
- *            查询结果页需点击返回按钮退出
+ ***************************************************************************/
+static void redraw_query(ui_context_t *ui,
+                         const int *phone_digits, int phone_count,
+                         const int *code_digits, int code_count,
+                         int phone_x, int phone_y, int phone_step,
+                         int code_x, int code_y, int code_step)
+{
+    lcd_show_menu(&ui->lcd, "received.jpg");
+
+    for (int i = 0; i < phone_count; i++)
+    {
+        lcd_show_digit(&ui->lcd, phone_digits[i], phone_x, phone_y - i * phone_step);
+    }
+    for (int i = 0; i < code_count; i++)
+    {
+        lcd_show_digit(&ui->lcd, code_digits[i], code_x, code_y - i * code_step);
+    }
+}
+
+/**************************************************************************
+ *
+ *   @brief : 快件查询界面
+ *          点击输入框弹出键盘，点击确认/键盘外收起键盘
+ *
+ *   坐标布局：
+ *     返回键          (19-67, 430-477)
+ *     获取验证码按钮   (313-362, 43-236)
+ *     查询按钮        (386-437, 43-438)
+ *     手机号输入框    (250-296, 43-438)
+ *     验证码输入框    (315-362, 243-438)
+ *     键盘显示位置    (493, 0)
+ *     手机号显示      (264, 408 - i*28)
+ *     验证码显示      (329, 408 - i*45)
  *
  ***************************************************************************/
 int show_received_query(ui_context_t *ui)
 {
     int ts_x, ts_y;
     int phone_digits[11];
-    int phone_len = 0;
+    int phone_count = 0;
     int code_digits[4];
-    int code_len = 0;
-    int step = 1;
+    int code_count = 0;
     int key;
-    int fail_count = 0;
+    int active_field = 0;
+    int verify_fail_count = 0;
+    int pending_click = 0;
     time_t start_time;
-    char phone[12];
-    char input_code[7];
+    char phone[12] = {0};
+
+    const int phone_x = 264;
+    const int phone_y = 408;
+    const int phone_step = 28;
+    const int code_x = 329;
+    const int code_y = 408;
+    const int code_step = 45;
 
     if (ui == NULL)
     {
@@ -52,8 +84,15 @@ int show_received_query(ui_context_t *ui)
 
     memset(phone_digits, 0, sizeof(phone_digits));
     memset(code_digits, 0, sizeof(code_digits));
+
     lcd_show_menu(&ui->lcd, "received.jpg");
     start_time = time(NULL);
+
+    for (int i = 0; i < 5; i++)
+    {
+        touchpad_get_coord(&ui->touch, &ts_x, &ts_y);
+        usleep(20000);
+    }
 
     while (1)
     {
@@ -68,186 +107,323 @@ int show_received_query(ui_context_t *ui)
             return RET_TIMEOUT;
         }
 
-        if (touchpad_get_coord(&ui->touch, &ts_x, &ts_y) == 0)
+        if (!pending_click)
         {
-            if (ts_x >= 17 && ts_x <= 62 && ts_y >= 427 && ts_y <= 472)
+            if (touchpad_get_coord(&ui->touch, &ts_x, &ts_y) != 0)
             {
-                return RET_QUERY_BACK;
+                usleep(50000);
+                continue;
+            }
+        }
+        pending_click = 0;
+
+        if (ts_x >= 19 && ts_x <= 67 && ts_y >= 430 && ts_y <= 477)
+        {
+            printf("[查询] 用户点击返回键\n");
+            return RET_QUERY_BACK;
+        }
+
+        if (ts_x >= 313 && ts_x <= 362 && ts_y >= 43 && ts_y <= 236)
+        {
+            if (phone_count != 11)
+            {
+                printf("[查询] 请先输入完整的手机号\n");
+                usleep(50000);
+                continue;
+            }
+
+            for (int i = 0; i < 11; i++)
+                phone[i] = '0' + phone_digits[i];
+            phone[11] = '\0';
+
+            time_t now = time(NULL);
+            if (strcmp(g_last_sms_phone, phone) == 0 &&
+                (now - g_last_sms_time) < SMS_COOLDOWN_SEC)
+            {
+                printf("[短信] 请 %d 秒后再试\n",
+                       SMS_COOLDOWN_SEC - (int)(now - g_last_sms_time));
+            }
+            else
+            {
+                char sms_code[7];
+                generate_random_code(sms_code, 4);
+
+                int ret = send_sms_code(phone, sms_code);
+                if (ret == 0)
+                {
+                    safe_strcpy(g_last_sms_phone, sizeof(g_last_sms_phone), phone);
+                    safe_strcpy(g_last_sms_code, sizeof(g_last_sms_code), sms_code);
+                    g_last_sms_time = now;
+                    printf("[短信] 验证码已发送到 %s: %s\n", phone, sms_code);
+                }
+                else
+                {
+                    printf("[短信] 验证码发送失败，错误码: %d\n", ret);
+                }
+            }
+            usleep(100000);
+            continue;
+        }
+
+        if (ts_x >= 386 && ts_x <= 437 && ts_y >= 43 && ts_y <= 438)
+        {
+            if (phone_count != 11 || code_count != 4)
+            {
+                printf("[查询] 请先完整填写手机号和验证码\n");
+                usleep(50000);
+                continue;
+            }
+
+            char code[5];
+            for (int i = 0; i < 4; i++)
+                code[i] = '0' + code_digits[i];
+            code[4] = '\0';
+
+            for (int i = 0; i < 11; i++)
+                phone[i] = '0' + phone_digits[i];
+            phone[11] = '\0';
+
+            if (!verify_phone_code(phone, code))
+            {
+                verify_fail_count++;
+                printf("[查询] 验证失败（第%d次）\n", verify_fail_count);
+
+                if (verify_fail_count >= MAX_VERIFY_FAIL)
+                {
+                    printf("[查询] 验证码错误次数过多，返回主页\n");
+                    return RET_LOGIN_FAILED;
+                }
+
+                memset(code_digits, 0, sizeof(code_digits));
+                code_count = 0;
+                redraw_query(ui, phone_digits, phone_count,
+                             code_digits, code_count,
+                             phone_x, phone_y, phone_step,
+                             code_x, code_y, code_step);
+                usleep(100000);
+                continue;
+            }
+
+            printf("[查询] 验证成功，查询 %s 的快件\n", phone);
+
+            locker_node_t *head = ui_get_locker_head();
+            locker_node_t *node = head;
+            locker_node_t *first = NULL;
+            int pkg_count = 0;
+
+            while (node != NULL)
+            {
+                if (node->loc_data == LOCKER_OCCUPIED &&
+                    strcmp(node->small_phone, phone) == 0)
+                {
+                    if (first == NULL)
+                        first = node;
+                    pkg_count++;
+                    printf("[查询] 包裹 #%d: 柜号 %s, 取件码 %s\n",
+                           pkg_count, node->locker_ID, node->locker_getID);
+                }
+                node = node->next;
+            }
+
+            if (pkg_count > 0)
+            {
+                printf("[查询] 手机号 %s 共有 %d 个快件\n", phone, pkg_count);
+                lcd_show_jpg(&ui->lcd, "resource/menu_pic/jpg/had_received.jpg", 488, 43);
+
+                char pickup_code[16];
+                strncpy(pickup_code, first->locker_getID, sizeof(pickup_code) - 1);
+                pickup_code[sizeof(pickup_code) - 1] = '\0';
+
+                int code_len = strlen(pickup_code);
+                for (int i = 0; i < code_len; i++)
+                {
+                    int digit = pickup_code[i] - '0';
+                    if (digit >= 0 && digit <= 9)
+                    {
+                        char num_path[128];
+                        snprintf(num_path, sizeof(num_path),
+                                 "resource/num_pic/b_num_%d_g.jpg", digit);
+                        lcd_show_jpg(&ui->lcd, num_path, 611, 233 - i * 30);
+                        usleep(10000);
+                    }
+                }
+                printf("[查询] 取件码已显示: %s\n", pickup_code);
+            }
+            else
+            {
+                lcd_show_jpg(&ui->lcd, "resource/menu_pic/jpg/not_received.jpg", 488, 43);
+                printf("[查询] 手机号 %s 没有快件\n", phone);
+            }
+
+            time_t result_start = time(NULL);
+            while (1)
+            {
+                if (time(NULL) - result_start > 30)
+                {
+                    printf("[查询] 结果页超时，返回主页\n");
+                    return RET_TIMEOUT;
+                }
+                if (touchpad_get_coord(&ui->touch, &ts_x, &ts_y) == 0)
+                {
+                    if (ts_x >= 19 && ts_x <= 67 && ts_y >= 430 && ts_y <= 477)
+                    {
+                        break;
+                    }
+                }
+                usleep(50000);
+            }
+
+            return RET_QUERY_OK;
+        }
+
+        if (ts_x >= 250 && ts_x <= 296 && ts_y >= 43 && ts_y <= 438)
+        {
+            active_field = 1;
+            lcd_show_jpg(&ui->lcd, "resource/menu_pic/jpg/keyboard.jpg", 493, 0);
+        }
+        else if (ts_x >= 315 && ts_x <= 362 && ts_y >= 243 && ts_y <= 438)
+        {
+            if (phone_count != 11)
+            {
+                printf("[查询] 请先输入手机号\n");
+                usleep(50000);
+                continue;
+            }
+            active_field = 2;
+            lcd_show_jpg(&ui->lcd, "resource/menu_pic/jpg/keyboard.jpg", 493, 0);
+        }
+        else
+        {
+            usleep(30000);
+            continue;
+        }
+
+        while (active_field != 0)
+        {
+            if (ui_check_pickup_notify())
+            {
+                return RET_SCAN_PICKUP;
+            }
+
+            if ((time(NULL) - start_time) >= PAGE_TIMEOUT_SEC)
+            {
+                printf("[超时] 查询界面操作超时(%d秒)，返回主页\n", PAGE_TIMEOUT_SEC);
+                return RET_TIMEOUT;
+            }
+
+            if (touchpad_get_coord(&ui->touch, &ts_x, &ts_y) != 0)
+            {
+                usleep(50000);
+                continue;
+            }
+
+            if (ts_x < 493)
+            {
+                int is_func_button = 0;
+
+                if (ts_x >= 19 && ts_x <= 67 && ts_y >= 430 && ts_y <= 477)
+                {
+                    is_func_button = 1;
+                }
+                else if (ts_x >= 313 && ts_x <= 362 && ts_y >= 43 && ts_y <= 236)
+                {
+                    is_func_button = 1;
+                }
+                else if (ts_x >= 386 && ts_x <= 437 && ts_y >= 43 && ts_y <= 438)
+                {
+                    is_func_button = 1;
+                }
+
+                if (is_func_button)
+                {
+                    pending_click = 1;
+                }
+                else
+                {
+                    printf("[查询] 用户点击键盘外区域，收起键盘\n");
+                }
+
+                active_field = 0;
+                redraw_query(ui, phone_digits, phone_count,
+                             code_digits, code_count,
+                             phone_x, phone_y, phone_step,
+                             code_x, code_y, code_step);
+                break;
             }
 
             key = get_key_from_touch(ts_x, ts_y);
 
-            if (step == 1)
+            if (key == UI_KEY_BACK)
             {
-                if (key >= 0 && key <= 9 && phone_len < 11)
+                printf("[查询] 用户点击键盘返回键\n");
+                active_field = 0;
+                redraw_query(ui, phone_digits, phone_count,
+                             code_digits, code_count,
+                             phone_x, phone_y, phone_step,
+                             code_x, code_y, code_step);
+                break;
+            }
+
+            if (key == UI_KEY_CONFIRM || key == -1)
+            {
+                active_field = 0;
+                redraw_query(ui, phone_digits, phone_count,
+                             code_digits, code_count,
+                             phone_x, phone_y, phone_step,
+                             code_x, code_y, code_step);
+                break;
+            }
+
+            if (active_field == 1)
+            {
+                if (key >= 0 && key <= 9 && phone_count < 11)
                 {
-                    phone_digits[phone_len] = key;
-                    lcd_show_digit(&ui->lcd, key, 457, 346 - phone_len * 70);
-                    phone_len++;
+                    phone_digits[phone_count] = key;
+                    lcd_show_digit(&ui->lcd, key, phone_x,
+                                   phone_y - phone_count * phone_step);
+                    phone_count++;
                 }
                 else if (key == UI_KEY_DELETE)
                 {
-                    if (phone_len > 0)
+                    if (phone_count > 0)
                     {
-                        phone_len--;
-                        phone_digits[phone_len] = 0;
-                        lcd_show_menu(&ui->lcd, "received.jpg");
-                        for (int i = 0; i < phone_len; i++)
-                        {
-                            lcd_show_digit(&ui->lcd, phone_digits[i], 457, 346 - i * 70);
-                        }
-                    }
-                }
-                else if (key == UI_KEY_CONFIRM)
-                {
-                    if (phone_len == 11)
-                    {
-                        for (int i = 0; i < 11; i++)
-                        {
-                            phone[i] = '0' + phone_digits[i];
-                        }
-                        phone[11] = '\0';
-
-                        lcd_show_menu(&ui->lcd, "received.jpg");
-                        step = 2;
-                        printf("[查询] 手机号: %s, 进入验证码输入\n", phone);
-
-                        if (strcmp(phone, DEMO_PHONE) != 0)
-                        {
-                            char sms_code[7];
-                            generate_random_code(sms_code, 4);
-                            int sms_ret = send_sms_code(phone, sms_code);
-                            if (sms_ret == 0)
-                            {
-                                safe_strcpy(g_last_sms_phone, sizeof(g_last_sms_phone), phone);
-                                safe_strcpy(g_last_sms_code, sizeof(g_last_sms_code), sms_code);
-                                g_last_sms_time = time(NULL);
-                                printf("[查询] 短信验证码 %s 已发送到 %s\n", sms_code, phone);
-                            }
-                            else
-                            {
-                                printf("[查询] 短信发送失败(ret=%d)，请稍后重试\n", sms_ret);
-                                return RET_LOGIN_FAILED;
-                            }
-                        }
-                        else
-                        {
-                            printf("[查询] Demo 手机号，跳过短信发送\n");
-                            safe_strcpy(g_last_sms_phone, sizeof(g_last_sms_phone), phone);
-                            safe_strcpy(g_last_sms_code, sizeof(g_last_sms_code), DEMO_CODE);
-                            g_last_sms_time = time(NULL);
-                        }
+                        phone_count--;
+                        phone_digits[phone_count] = 0;
+                        redraw_query(ui, phone_digits, phone_count,
+                                     code_digits, code_count,
+                                     phone_x, phone_y, phone_step,
+                                     code_x, code_y, code_step);
+                        lcd_show_jpg(&ui->lcd, "resource/menu_pic/jpg/keyboard.jpg", 493, 0);
                     }
                 }
             }
-            else if (step == 2)
+            else if (active_field == 2)
             {
-                if (key >= 0 && key <= 9 && code_len < 4)
+                if (key >= 0 && key <= 9 && code_count < 4)
                 {
-                    code_digits[code_len] = key;
-                    lcd_show_digit(&ui->lcd, key, 349, 346 - code_len * 70);
-                    code_len++;
+                    code_digits[code_count] = key;
+                    lcd_show_digit(&ui->lcd, key, code_x,
+                                   code_y - code_count * code_step);
+                    code_count++;
                 }
                 else if (key == UI_KEY_DELETE)
                 {
-                    if (code_len > 0)
+                    if (code_count > 0)
                     {
-                        code_len--;
-                        code_digits[code_len] = 0;
-                        lcd_show_menu(&ui->lcd, "received.jpg");
-                        for (int i = 0; i < code_len; i++)
-                        {
-                            lcd_show_digit(&ui->lcd, code_digits[i], 349, 346 - i * 70);
-                        }
-                    }
-                }
-                else if (key == UI_KEY_CONFIRM)
-                {
-                    if (code_len == 4)
-                    {
-                        for (int i = 0; i < 4; i++)
-                        {
-                            input_code[i] = '0' + code_digits[i];
-                        }
-                        input_code[4] = '\0';
-
-                        if (verify_phone_code(phone, input_code))
-                        {
-                            printf("[查询] 验证成功，查询 %s 的快件\n", phone);
-                            lcd_show_menu(&ui->lcd, "received.jpg");
-
-                            locker_node_t *head = ui_get_locker_head();
-                            locker_node_t *node = head;
-                            locker_node_t *first = NULL;
-                            int pkg_count = 0;
-
-                            while (node != NULL)
-                            {
-                                if (node->loc_data == LOCKER_OCCUPIED &&
-                                    strcmp(node->small_phone, phone) == 0)
-                                {
-                                    if (first == NULL)
-                                        first = node;
-                                    pkg_count++;
-                                    printf("[查询] 包裹 #%d: 柜号 %s, 取件码 %s\n",
-                                           pkg_count, node->locker_ID, node->locker_getID);
-                                }
-                                node = node->next;
-                            }
-
-                            if (pkg_count > 0)
-                            {
-                                printf("[查询] 手机号 %s 共有 %d 个快件\n", phone, pkg_count);
-                                lcd_show_jpg(&ui->lcd, "resource/menu_pic/jpg/had_received.jpg", 488, 43);
-                                lcd_show_jpg(&ui->lcd, "resource/menu_pic/jpg/takeout_code.jpg", 0, 0);
-                                lcd_show_digit(&ui->lcd, first->locker_getID[0] - '0', 457, 346);
-                                lcd_show_digit(&ui->lcd, first->locker_getID[1] - '0', 457, 276);
-                                lcd_show_digit(&ui->lcd, first->locker_getID[2] - '0', 457, 206);
-                                lcd_show_digit(&ui->lcd, first->locker_getID[3] - '0', 457, 136);
-                            }
-                            else
-                            {
-                                lcd_show_jpg(&ui->lcd, "resource/menu_pic/jpg/not_received.jpg", 488, 43);
-                                printf("[查询] 手机号 %s 没有快件\n", phone);
-                            }
-
-                            time_t result_start = time(NULL);
-                            while (1)
-                            {
-                                if (time(NULL) - result_start > 30)
-                                {
-                                    printf("[查询] 结果页超时，返回主页\n");
-                                    return RET_TIMEOUT;
-                                }
-                                if (touchpad_get_coord(&ui->touch, &ts_x, &ts_y) == 0)
-                                {
-                                    if (ts_x >= 17 && ts_x <= 62 && ts_y >= 427 && ts_y <= 472)
-                                    {
-                                        break;
-                                    }
-                                }
-                                usleep(50000);
-                            }
-
-                            return RET_QUERY_OK;
-                        }
-                        else
-                        {
-                            fail_count++;
-                            printf("[查询] 验证失败(%d/%d)\n", fail_count, MAX_VERIFY_FAIL);
-                            if (fail_count >= MAX_VERIFY_FAIL)
-                            {
-                                printf("[查询] 验证码错误次数过多，返回主页\n");
-                                return RET_LOGIN_FAILED;
-                            }
-                            code_len = 0;
-                            memset(code_digits, 0, sizeof(code_digits));
-                            lcd_show_menu(&ui->lcd, "received.jpg");
-                        }
+                        code_count--;
+                        code_digits[code_count] = 0;
+                        redraw_query(ui, phone_digits, phone_count,
+                                     code_digits, code_count,
+                                     phone_x, phone_y, phone_step,
+                                     code_x, code_y, code_step);
+                        lcd_show_jpg(&ui->lcd, "resource/menu_pic/jpg/keyboard.jpg", 493, 0);
                     }
                 }
             }
+
+            usleep(50000);
         }
+
         usleep(50000);
     }
 }

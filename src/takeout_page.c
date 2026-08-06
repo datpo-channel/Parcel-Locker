@@ -119,6 +119,9 @@ int show_takeout_code(ui_context_t *ui, char *code)
                     code[4] = '\0';
                     return RET_TAKEOUT_OK;
                 }
+                memset(digits, 0, sizeof(digits));
+                count = 0;
+                redraw_takeout_code(ui, digits, count);
             }
         }
         usleep(50000);
