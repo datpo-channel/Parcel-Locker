@@ -603,7 +603,7 @@ cd /opt/mail-box-api && node index.js &
 
 ## 特别鸣谢
 
-- [https://github.com/songzixianyu](https://github.com/songzixianyu)
+- [songzixianyu](https://github.com/songzixianyu)
 
 ## License
 
