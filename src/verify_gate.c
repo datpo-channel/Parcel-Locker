@@ -12,18 +12,47 @@
 static const char *VG_API_KEY = "";
 static const char *vg_api_base_url = "http://8.148.211.45:3000";
 
+/**************************************************************************
+ *
+ *   @brief : 获取验证服务API基础地址
+ *
+ *   @retval: API基础地址字符串
+ *   @note  : 优先读取环境变量 VG_API_BASE，未设置则使用默认地址
+ *
+ ***************************************************************************/
 static const char *vg_api_base(void)
 {
     const char *env = getenv("VG_API_BASE");
     return (env && *env) ? env : vg_api_base_url;
 }
 
+/**************************************************************************
+ *
+ *   @brief : 获取验证服务API密钥
+ *
+ *   @retval: API密钥字符串
+ *   @note  : 优先读取环境变量 VG_API_KEY，未设置则使用默认密钥
+ *
+ ***************************************************************************/
 static const char *vg_api_key(void)
 {
     const char *env = getenv("VG_API_KEY");
     return (env && *env) ? env : VG_API_KEY;
 }
 
+/**************************************************************************
+ *
+ *   @brief : 从JSON字符串中提取指定键的字符串值
+ *   @arg   : json     JSON响应字符串
+ *   @arg   : key      要查找的键名
+ *   @arg   : out      输出缓冲区
+ *   @arg   : out_size 输出缓冲区大小
+ *
+ *   @retval: 0  成功提取
+ *           -1 未找到键或格式错误
+ *   @note  : 简易JSON解析，支持转义字符处理
+ *
+ ***************************************************************************/
 static int json_extract_string(const char *json, const char *key,
                                char *out, size_t out_size)
 {
@@ -79,6 +108,15 @@ static int json_extract_string(const char *json, const char *key,
     return 0;
 }
 
+/**************************************************************************
+ *
+ *   @brief : 从JSON字符串中提取指定键的长整数值
+ *   @arg   : json JSON响应字符串
+ *   @arg   : key  要查找的键名
+ *
+ *   @retval: 提取到的数值，未找到或格式错误返回 0
+ *
+ ***************************************************************************/
 static long json_extract_long(const char *json, const char *key)
 {
     char pattern[64];
@@ -114,6 +152,17 @@ static long json_extract_long(const char *json, const char *key)
     return val;
 }
 
+/**************************************************************************
+ *
+ *   @brief : 从JSON字符串中提取指定键的布尔值
+ *   @arg   : json JSON响应字符串
+ *   @arg   : key  要查找的键名
+ *
+ *   @retval: 1  true
+ *            0  false
+ *           -1 未找到或格式错误
+ *
+ ***************************************************************************/
 static int json_find_bool(const char *json, const char *key)
 {
     char pattern[64];
@@ -150,6 +199,15 @@ static int json_find_bool(const char *json, const char *key)
     return -1;
 }
 
+/**************************************************************************
+ *
+ *   @brief : 检测系统是否安装了curl命令
+ *
+ *   @retval: 1  已安装curl
+ *            0  未安装curl
+ *   @note  : 首次检测后缓存结果，避免重复执行which命令
+ *
+ ***************************************************************************/
 static int has_curl(void)
 {
     static int checked = -1;
@@ -173,6 +231,17 @@ static int has_curl(void)
     return checked;
 }
 
+/**************************************************************************
+ *
+ *   @brief : 发送HTTP请求并获取响应
+ *   @arg   : method  HTTP方法（"GET"/"POST"等）
+ *   @arg   : url_path API路径（相对于基础地址）
+ *   @arg   : body    POST请求体，GET请求传NULL
+ *
+ *   @retval: 成功返回响应字符串（需调用者free），失败返回NULL
+ *   @note  : 优先使用curl，未安装则回退到wget；超时15秒
+ *
+ ***************************************************************************/
 static char *vg_http_request(const char *method, const char *url_path,
                              const char *body)
 {
@@ -270,6 +339,17 @@ static char *vg_http_request(const char *method, const char *url_path,
     return response;
 }
 
+/**************************************************************************
+ *
+ *   @brief : 生成扫码取件令牌和对应的扫码URL
+ *   @arg   : out_token 输出缓冲区，存储生成的令牌（需VG_TOKEN_LEN字节）
+ *   @arg   : out_url   输出缓冲区，存储扫码URL（需VG_URL_LEN字节）
+ *
+ *   @retval: 0  成功
+ *           -1 参数无效
+ *   @note  : 令牌基于时间戳和计数器生成，格式为UUID风格
+ *
+ ***************************************************************************/
 int vg_create_pickup(char *out_token, char *out_url)
 {
     static unsigned int counter = 0;
@@ -296,7 +376,7 @@ int vg_create_pickup(char *out_token, char *out_url)
              (seed << 8) & 0xFFFF);
 
     snprintf(out_url, VG_URL_LEN, "%s/?token=%s",
-             vg_api_base_url, out_token);
+             vg_api_base(), out_token);
 
     printf("[取件] 生成token: %s\n", out_token);
     printf("[取件] 扫码URL: %s\n", out_url);
@@ -304,6 +384,18 @@ int vg_create_pickup(char *out_token, char *out_url)
     return 0;
 }
 
+/**************************************************************************
+ *
+ *   @brief : 查询取件令牌的验证状态
+ *   @arg   : token  取件令牌字符串
+ *   @arg   : status 输出参数，存储验证状态和手机号，传NULL则不获取详情
+ *
+ *   @retval: VG_STATUS_VERIFIED  已验证
+ *           VG_STATUS_PENDING    待验证
+ *           VG_STATUS_ERROR      查询失败
+ *   @note  : 通过GET /api/status接口查询，提取verified和phone字段
+ *
+ ***************************************************************************/
 int vg_query_status(const char *token, vg_status_t *status)
 {
     char url_path[VG_TOKEN_LEN + 32];
@@ -355,6 +447,19 @@ int vg_query_status(const char *token, vg_status_t *status)
     return result;
 }
 
+/**************************************************************************
+ *
+ *   @brief : 消费取件票据，标记令牌为已开箱并获取验证手机号
+ *   @arg   : token      取件令牌字符串
+ *   @arg   : out_phone  输出缓冲区，存储验证手机号
+ *   @arg   : phone_size 输出缓冲区大小
+ *
+ *   @retval: 1  消费成功
+ *            0  令牌已被消费或验证未通过
+ *           -1 参数无效或请求失败
+ *   @note  : 通过POST /api/consume接口消费，令牌只能被消费一次
+ *
+ ***************************************************************************/
 int vg_consume_ticket(const char *token, char *out_phone, size_t phone_size)
 {
     char body[VG_TOKEN_LEN + 32];

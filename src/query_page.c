@@ -96,7 +96,7 @@ int show_received_query(ui_context_t *ui)
 
     while (1)
     {
-        if (ui_check_pickup_notify())
+        if (g_pickup_notify_flag)
         {
             return RET_SCAN_PICKUP;
         }
@@ -300,7 +300,7 @@ int show_received_query(ui_context_t *ui)
 
         while (active_field != 0)
         {
-            if (ui_check_pickup_notify())
+            if (g_pickup_notify_flag)
             {
                 return RET_SCAN_PICKUP;
             }

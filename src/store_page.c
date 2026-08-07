@@ -40,6 +40,18 @@ static void generate_random_code_int(int *digits, int length)
  *
  *   @brief : 重绘存件信息界面，恢复所有已输入/已选择的状态
  *          包括手机号、取件码、箱体选择、存放时长
+ *   @arg   : ui                指向 ui_context_t 结构体的指针
+ *   @arg   : phone_digits      手机号数字数组
+ *   @arg   : phone_count       手机号已输入位数
+ *   @arg   : code_digits       取件码数字数组
+ *   @arg   : code_auto_generated 取件码是否已自动生成
+ *   @arg   : sel_box           选中的箱号（>0表示已选）
+ *   @arg   : sel_letter        选中的箱字母
+ *   @arg   : sel_d1/sel_d2     选中的箱数字
+ *   @arg   : no_available_box  无可用箱标志
+ *   @arg   : sel_duration      选中的存放时长（1/2/4/8小时）
+ *
+ *   @retval: 无
  *
  ***************************************************************************/
 static void redraw_store_info(ui_context_t *ui,
@@ -593,8 +605,8 @@ int show_pay_info(ui_context_t *ui)
  *   @retval: 1  继续存件
  *            0  返回首页（或超时）
  *   @note  : 显示 send_success.jpg 背景
- *            继续存件按钮坐标: (663,247)-(711,441)
- *            返回首页按钮坐标: (664,38)-(711,230)
+ *            继续存件按钮坐标: (610,37)-(661,442)
+ *            返回首页按钮坐标: (686,38)-(734,440)
  *
  ***************************************************************************/
 int show_send_success(ui_context_t *ui)
@@ -626,12 +638,12 @@ int show_send_success(ui_context_t *ui)
 
         if (touchpad_get_coord(&ui->touch, &ts_x, &ts_y) == 0)
         {
-            if (ts_x >= 663 && ts_x <= 711 && ts_y >= 247 && ts_y <= 441)
+            if (ts_x >= 610 && ts_x <= 661 && ts_y >= 37 && ts_y <= 442)
             {
                 printf("[存件成功] 继续存件\n");
                 return 1;
             }
-            if (ts_x >= 664 && ts_x <= 711 && ts_y >= 38 && ts_y <= 230)
+            if (ts_x >= 686 && ts_x <= 734 && ts_y >= 38 && ts_y <= 440)
             {
                 printf("[存件成功] 返回首页\n");
                 return 0;

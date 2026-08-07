@@ -2,6 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <pthread.h>
 #include "takeout_page.h"
 #include "ret_codes.h"
 #include "config.h"
@@ -9,6 +10,54 @@
 #include "pickup_monitor.h"
 #include "lcd_ui_display.h"
 #include "touchpad.h"
+
+#define QR_DISPLAY_X  188
+#define QR_DISPLAY_Y  188
+
+static char g_qr_path[64] = {0};
+static volatile int g_qr_running = 0;
+static pthread_t g_qr_tid;
+
+/**************************************************************************
+ *
+ *   @brief : 二维码刷新线程，周期性重绘二维码防止被覆盖
+ *   @arg   : arg 线程参数，实际为 ui_context_t 指针
+ *
+ *   @retval: NULL
+ *   @note  : 每 100ms 重绘一次二维码图片，g_qr_running 为 0 时退出
+ *
+ ***************************************************************************/
+static void *qr_thread(void *arg)
+{
+    ui_context_t *ui = (ui_context_t *)arg;
+
+    while (g_qr_running)
+    {
+        lcd_show_jpg(&ui->lcd, g_qr_path, QR_DISPLAY_X, QR_DISPLAY_Y);
+        usleep(100000);
+    }
+    return NULL;
+}
+
+/**************************************************************************
+ *
+ *   @brief : 设置扫码取件二维码图片路径
+ *   @arg   : path 二维码图片路径，传 NULL 清除
+ *   @note  : 设置后，取件码输入界面会启动刷新线程显示二维码，
+ *            离开取件界面时线程自动停止，二维码消失
+ *
+ ***************************************************************************/
+void takeout_set_qr_path(const char *path)
+{
+    if (path != NULL)
+    {
+        snprintf(g_qr_path, sizeof(g_qr_path), "%s", path);
+    }
+    else
+    {
+        g_qr_path[0] = '\0';
+    }
+}
 
 /**************************************************************************
  *
@@ -27,6 +76,10 @@ static void redraw_takeout_code(ui_context_t *ui, const int *digits, int count)
     const int step_y = 70;
 
     lcd_show_menu(&ui->lcd, "takeout_code.jpg");
+    if (g_qr_path[0] != '\0')
+    {
+        lcd_show_jpg(&ui->lcd, g_qr_path, QR_DISPLAY_X, QR_DISPLAY_Y);
+    }
 
     for (int i = 0; i < count; i++)
     {
@@ -65,18 +118,34 @@ int show_takeout_code(ui_context_t *ui, char *code)
 
     memset(digits, 0, sizeof(digits));
     lcd_show_menu(&ui->lcd, "takeout_code.jpg");
+    if (g_qr_path[0] != '\0')
+    {
+        lcd_show_jpg(&ui->lcd, g_qr_path, QR_DISPLAY_X, QR_DISPLAY_Y);
+        g_qr_running = 1;
+        pthread_create(&g_qr_tid, NULL, qr_thread, ui);
+    }
     start_time = time(NULL);
 
     while (1)
     {
-        if (ui_check_pickup_notify())
+        if (g_pickup_notify_flag)
         {
+            if (g_qr_running)
+            {
+                g_qr_running = 0;
+                pthread_join(g_qr_tid, NULL);
+            }
             return RET_SCAN_PICKUP;
         }
 
         if ((time(NULL) - start_time) >= PAGE_TIMEOUT_SEC)
         {
             printf("[超时] 取件界面操作超时(%d秒)，返回主页\n", PAGE_TIMEOUT_SEC);
+            if (g_qr_running)
+            {
+                g_qr_running = 0;
+                pthread_join(g_qr_tid, NULL);
+            }
             return RET_TIMEOUT;
         }
 
@@ -86,10 +155,20 @@ int show_takeout_code(ui_context_t *ui, char *code)
 
             if (key == UI_KEY_BACK)
             {
+                if (g_qr_running)
+                {
+                    g_qr_running = 0;
+                    pthread_join(g_qr_tid, NULL);
+                }
                 return RET_TAKEOUT_BACK;
             }
             if (key == UI_KEY_QUERY)
             {
+                if (g_qr_running)
+                {
+                    g_qr_running = 0;
+                    pthread_join(g_qr_tid, NULL);
+                }
                 return RET_TAKEOUT_QUERY;
             }
 
@@ -117,6 +196,11 @@ int show_takeout_code(ui_context_t *ui, char *code)
                         code[i] = '0' + digits[i];
                     }
                     code[4] = '\0';
+                    if (g_qr_running)
+                    {
+                        g_qr_running = 0;
+                        pthread_join(g_qr_tid, NULL);
+                    }
                     return RET_TAKEOUT_OK;
                 }
                 memset(digits, 0, sizeof(digits));
@@ -179,6 +263,8 @@ void show_pickup_code(ui_context_t *ui, const char *code)
  *   @retval: 1  继续取件
  *            0  返回首页（或超时）
  *   @note  : 显示取件成功画面，用户可选择"继续取件"或"返回首页"
+ *            继续取件按钮坐标: (589,36)-(635,441)
+ *            返回首页按钮坐标: (664,37)-(710,440)
  *
  ***************************************************************************/
 int show_takeout_success(ui_context_t *ui)
@@ -210,12 +296,12 @@ int show_takeout_success(ui_context_t *ui)
 
         if (touchpad_get_coord(&ui->touch, &ts_x, &ts_y) == 0)
         {
-            if (ts_x >= 663 && ts_x <= 711 && ts_y >= 247 && ts_y <= 441)
+            if (ts_x >= 589 && ts_x <= 635 && ts_y >= 36 && ts_y <= 441)
             {
                 printf("[取件成功] 继续取件\n");
                 return 1;
             }
-            if (ts_x >= 664 && ts_x <= 711 && ts_y >= 38 && ts_y <= 230)
+            if (ts_x >= 664 && ts_x <= 710 && ts_y >= 37 && ts_y <= 440)
             {
                 printf("[取件成功] 返回首页\n");
                 return 0;

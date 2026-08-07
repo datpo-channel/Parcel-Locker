@@ -159,7 +159,7 @@ int show_main_menu(ui_context_t *ui)
 
     while (1)
     {
-        if (ui_check_pickup_notify())
+        if (g_pickup_notify_flag)
         {
             stop_ad_player(ui);
             return RET_SCAN_PICKUP;

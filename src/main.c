@@ -4,7 +4,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <time.h>
-#include <pthread.h>
 #include "ui_logic.h"
 #include "takeout_page.h"
 #include "store_page.h"
@@ -21,22 +20,18 @@
 
 char g_pickup_token[VG_TOKEN_LEN];
 
-static volatile int g_qr_running = 0;
-static pthread_t g_qr_tid;
-
-static void *qr_thread(void *arg)
-{
-    ui_context_t *ui = (ui_context_t *)arg;
-    char path[64] = "resource/qrcode/pickup_qr.jpg";
-
-    while (g_qr_running)
-    {
-        lcd_show_jpg(&ui->lcd, path, 188, 188);
-        usleep(100000);
-    }
-    return NULL;
-}
-
+/**************************************************************************
+ *
+ *   @brief : 检查扫码取件状态并执行开箱操作
+ *   @arg   : ui  指向 ui_context_t 结构体的指针
+ *
+ *   @retval: 1  扫码取件成功，已开箱并显示成功界面
+ *            0  未取件或无匹配包裹
+ *   @note  : 优先检查全局取件令牌 g_pickup_token，按手机号匹配柜子开箱；
+ *            其次遍历各柜子的存件令牌，验证通过后消费票据并开箱；
+ *            开箱成功后内部调用 show_takeout_success 显示成功界面
+ *
+ ***************************************************************************/
 static int check_scan_pickup(ui_context_t *ui)
 {
     locker_node_t *head = ui_get_locker_head();
@@ -64,12 +59,10 @@ static int check_scan_pickup(ui_context_t *ui)
             }
             if (opened > 0)
             {
-                vg_consume_ticket(g_pickup_token, NULL, 0);
                 show_takeout_success(ui);
                 memset(g_pickup_token, 0, sizeof(g_pickup_token));
                 return 1;
             }
-            vg_consume_ticket(g_pickup_token, NULL, 0);
             printf("[扫码取件] 手机号 %s 无匹配包裹\n", status.verified_phone);
             memset(g_pickup_token, 0, sizeof(g_pickup_token));
             return 0;
@@ -106,6 +99,17 @@ static int check_scan_pickup(ui_context_t *ui)
     return 0;
 }
 
+/**************************************************************************
+ *
+ *   @brief : 程序主入口，初始化系统并循环处理用户操作
+ *
+ *   @retval: 0  正常退出
+ *           -1  初始化失败
+ *   @note  : 初始化触摸屏和UI上下文，启动扫码取件后台监控线程，
+ *            循环显示主菜单并根据用户选择进入取件/存件/快递员/管理界面；
+ *            后台检测到扫码取件验证完成时，中断当前界面执行开箱
+ *
+ ***************************************************************************/
 int main(void)
 {
     ui_context_t ui;
@@ -155,12 +159,9 @@ int main(void)
 
         if (ret == RET_SCAN_PICKUP)
         {
-            ui_clear_pickup_notify();
+            g_pickup_notify_flag = 0;
             printf("[扫码取件] 主菜单检测到验证完成，执行开箱\n");
-            if (!check_scan_pickup(&ui))
-            {
-                show_takeout_success(&ui);
-            }
+            check_scan_pickup(&ui);
             continue;
         }
 
@@ -176,8 +177,7 @@ int main(void)
                 generate_qr(pickup_url, qr_path, 3, 2, 85);
                 printf("[扫码取件] 二维码已生成，token: %s\n", g_pickup_token);
 
-                g_qr_running = 1;
-                pthread_create(&g_qr_tid, NULL, qr_thread, &ui);
+                takeout_set_qr_path(qr_path);
 
                 int takeout_retry = 0;
 
@@ -193,12 +193,9 @@ int main(void)
 
                     if (ret == RET_SCAN_PICKUP)
                     {
-                        ui_clear_pickup_notify();
+                        g_pickup_notify_flag = 0;
                         printf("[扫码取件] 取件界面检测到验证完成，执行开箱\n");
-                        if (!check_scan_pickup(&ui))
-                        {
-                            show_takeout_success(&ui);
-                        }
+                        check_scan_pickup(&ui);
                         break;
                     }
 
@@ -218,12 +215,9 @@ int main(void)
                         int query_ret = show_received_query(&ui);
                         if (query_ret == RET_SCAN_PICKUP)
                         {
-                            ui_clear_pickup_notify();
+                            g_pickup_notify_flag = 0;
                             printf("[扫码取件] 查询界面检测到验证完成，执行开箱\n");
-                            if (!check_scan_pickup(&ui))
-                            {
-                                show_takeout_success(&ui);
-                            }
+                            check_scan_pickup(&ui);
                             break;
                         }
                         else if (query_ret == RET_QUERY_OK)
@@ -271,8 +265,7 @@ int main(void)
                     }
                 }
 
-                g_qr_running = 0;
-                pthread_join(g_qr_tid, NULL);
+                takeout_set_qr_path(NULL);
             }
             memset(g_pickup_token, 0, sizeof(g_pickup_token));
             break;

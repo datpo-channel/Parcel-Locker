@@ -20,6 +20,11 @@ time_t g_last_sms_time      = 0;
 /**************************************************************************
  *
  *   @brief : 安全的字符串拷贝，确保目标缓冲区以 '\0' 结尾
+ *   @arg   : dst      目标缓冲区
+ *   @arg   : dst_size 目标缓冲区大小
+ *   @arg   : src      源字符串
+ *
+ *   @retval: 无
  *
  ***************************************************************************/
 void safe_strcpy(char *dst, size_t dst_size, const char *src)
@@ -31,6 +36,16 @@ void safe_strcpy(char *dst, size_t dst_size, const char *src)
 /**************************************************************************
  *
  *   @brief : 重绘登录界面，恢复已输入的数字显示
+ *   @arg   : ui         指向 ui_context_t 结构体的指针
+ *   @arg   : bg_image   背景图片文件名
+ *   @arg   : digits     手机号数字数组
+ *   @arg   : count      手机号已输入位数
+ *   @arg   : code_digits 验证码数字数组
+ *   @arg   : code_count  验证码已输入位数
+ *   @arg   : phone_x/y/step 手机号显示坐标和步长
+ *   @arg   : code_x/y/step  验证码显示坐标和步长
+ *
+ *   @retval: 无
  *
  ***************************************************************************/
 static void redraw_login(ui_context_t *ui, const char *bg_image,
@@ -55,6 +70,14 @@ static void redraw_login(ui_context_t *ui, const char *bg_image,
  *
  *   @brief : 通用登录界面（快递员/用户共用）
  *          点击输入框弹出键盘，点击确认/键盘外收起键盘
+ *   @arg   : ui       指向 ui_context_t 结构体的指针
+ *   @arg   : bg_image 背景图片文件名
+ *   @arg   : phone    输出参数，存储用户输入的手机号
+ *
+ *   @retval: RET_LOGIN_OK     登录成功
+ *            RET_LOGIN_BACK   用户返回
+ *            RET_TIMEOUT      页面超时
+ *            RET_SCAN_PICKUP  后台检测到扫码取件
  *
  *   坐标布局：
  *     返回键          (45-100, 425-475)
@@ -353,6 +376,10 @@ static int show_login_common(ui_context_t *ui, const char *bg_image, char *phone
 /**************************************************************************
  *
  *   @brief : 快递员登录界面
+ *   @arg   : ui    指向 ui_context_t 结构体的指针
+ *   @arg   : phone 输出参数，存储用户输入的手机号
+ *
+ *   @retval: 同 show_login_common
  *
  ***************************************************************************/
 int show_sendman_login(ui_context_t *ui, char *phone)
@@ -363,6 +390,10 @@ int show_sendman_login(ui_context_t *ui, char *phone)
 /**************************************************************************
  *
  *   @brief : 普通用户登录界面
+ *   @arg   : ui    指向 ui_context_t 结构体的指针
+ *   @arg   : phone 输出参数，存储用户输入的手机号
+ *
+ *   @retval: 同 show_login_common
  *
  ***************************************************************************/
 int show_user_login(ui_context_t *ui, char *phone)
@@ -373,6 +404,12 @@ int show_user_login(ui_context_t *ui, char *phone)
 /**************************************************************************
  *
  *   @brief : 验证手机号和短信验证码是否匹配
+ *   @arg   : phone 用户输入的手机号
+ *   @arg   : code  用户输入的验证码
+ *
+ *   @retval: 1  验证通过
+ *            0  验证失败或参数无效
+ *   @note  : 检查手机号、验证码、发送时间是否与最近一次发送的短信匹配
  *
  ***************************************************************************/
 int verify_phone_code(const char *phone, const char *code)
