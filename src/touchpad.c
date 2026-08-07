@@ -373,6 +373,8 @@ void *touchpad_task(void *arg)
             if (event.value == 0 && x_ready && y_ready)
             {
                 ctx->coord_ready = 1;
+                x_ready = 0;
+                y_ready = 0;
             }
         }
 

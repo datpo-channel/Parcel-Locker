@@ -10,6 +10,7 @@
 #include "keyboard_input.h"
 #include "lcd_ui_display.h"
 #include "locker_info.h"
+#include "pickup_monitor.h"
 #include "ui_logic.h"
 #include "touchpad.h"
 
@@ -29,7 +30,6 @@ static void generate_random_code_int(int *digits, int length)
         return;
     }
 
-    srand((unsigned int)time(NULL) + clock());
     for (int i = 0; i < length; i++)
     {
         digits[i] = rand() % 10;
@@ -580,6 +580,12 @@ int show_pay_info(ui_context_t *ui)
             return 0;
         }
 
+        if (g_pickup_notify_flag)
+        {
+            printf("[扫码取件] 支付界面检测到扫码通知，中断\n");
+            return 0;
+        }
+
         if (touchpad_get_coord(&ui->touch, &ts_x, &ts_y) == 0)
         {
             if (ts_x >= 581 && ts_x <= 636 && ts_y >= 40 && ts_y <= 422)
@@ -633,6 +639,12 @@ int show_send_success(ui_context_t *ui)
         if ((time(NULL) - start_time) >= PAGE_TIMEOUT_SEC)
         {
             printf("[超时] 存件成功页面显示超时(%d秒)，自动返回主页\n", PAGE_TIMEOUT_SEC);
+            return 0;
+        }
+
+        if (g_pickup_notify_flag)
+        {
+            printf("[扫码取件] 存件成功界面检测到扫码通知，中断\n");
             return 0;
         }
 

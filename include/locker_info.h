@@ -15,7 +15,6 @@
 #define LOCKER_OCCUPIED  1
 
 #define LOCKER_TOTAL     30
-#define LOCKER_ID_PREFIX "L"
 
 typedef struct locker_node
 {
@@ -102,18 +101,6 @@ locker_node_t *locker_find_by_code(locker_node_t *head, const char *locker_getID
 
 /**************************************************************************
  *
- *   @brief : 根据取件令牌查找节点
- *   @arg   : head  链表头指针
- *   @arg   : token 取件令牌
- *
- *   @retval: 找到返回节点指针，未找到返回 NULL
- *   @note  : 用于扫码取件时根据令牌定位储物柜
- *
- ***************************************************************************/
-locker_node_t *locker_find_by_token(locker_node_t *head, const char *token);
-
-/**************************************************************************
- *
  *   @brief : 更新储物柜状态
  *   @arg   : node      指向储物柜节点的指针
  *   @arg   : loc_data  新状态 (LOCKER_EMPTY / LOCKER_OCCUPIED)
@@ -177,7 +164,7 @@ void locker_free_list(locker_node_t **head);
  *   @arg   : count  储物柜总数
  *
  *   @retval: 成功返回 0，失败返回 -1
- *   @note  : 创建 count 个空柜节点，编号为 L01, L02, ... L30
+ *   @note  : 创建 count 个空柜节点，编号为 A01-A15, B01-B10, C01-C05
  *            调用前 *head 应为 NULL
  *
  ***************************************************************************/

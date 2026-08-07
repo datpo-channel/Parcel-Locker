@@ -8,6 +8,7 @@
 #include "utils.h"
 #include "keyboard_input.h"
 #include "lcd_ui_display.h"
+#include "pickup_monitor.h"
 #include "sms.h"
 #include "touchpad.h"
 
@@ -74,10 +75,10 @@ static void redraw_login(ui_context_t *ui, const char *bg_image,
  *   @arg   : bg_image 背景图片文件名
  *   @arg   : phone    输出参数，存储用户输入的手机号
  *
- *   @retval: RET_LOGIN_OK     登录成功
- *            RET_LOGIN_BACK   用户返回
- *            RET_TIMEOUT      页面超时
- *            RET_SCAN_PICKUP  后台检测到扫码取件
+ *   @retval: RET_TAKEOUT_OK    登录成功
+ *            RET_LOGIN_CANCEL  用户返回
+ *            RET_TIMEOUT       页面超时
+ *            RET_SCAN_PICKUP   后台检测到扫码取件
  *
  *   坐标布局：
  *     返回键          (45-100, 425-475)
@@ -129,6 +130,11 @@ static int show_login_common(ui_context_t *ui, const char *bg_image, char *phone
 
     while (1)
     {
+        if (g_pickup_notify_flag)
+        {
+            return RET_SCAN_PICKUP;
+        }
+
         if ((time(NULL) - start_time) >= PAGE_TIMEOUT_SEC)
         {
             printf("[登录] 登录界面操作超时(%d秒)，返回主页\n", PAGE_TIMEOUT_SEC);
@@ -255,6 +261,11 @@ static int show_login_common(ui_context_t *ui, const char *bg_image, char *phone
 
         while (active_field != 0)
         {
+            if (g_pickup_notify_flag)
+            {
+                return RET_SCAN_PICKUP;
+            }
+
             if ((time(NULL) - start_time) >= PAGE_TIMEOUT_SEC)
             {
                 printf("[登录] 登录界面操作超时(%d秒)，返回主页\n", PAGE_TIMEOUT_SEC);

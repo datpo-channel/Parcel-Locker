@@ -122,7 +122,10 @@ int show_takeout_code(ui_context_t *ui, char *code)
     {
         lcd_show_jpg(&ui->lcd, g_qr_path, QR_DISPLAY_X, QR_DISPLAY_Y);
         g_qr_running = 1;
-        pthread_create(&g_qr_tid, NULL, qr_thread, ui);
+        if (pthread_create(&g_qr_tid, NULL, qr_thread, ui) != 0)
+        {
+            g_qr_running = 0;
+        }
     }
     start_time = time(NULL);
 
@@ -225,6 +228,7 @@ int show_takeout_code(ui_context_t *ui, char *code)
 void show_pickup_code(ui_context_t *ui, const char *code)
 {
     int ts_x, ts_y;
+    time_t start_time;
     const int start_x = 457;
     const int start_y = 346;
     const int step_y = 70;
@@ -242,8 +246,21 @@ void show_pickup_code(ui_context_t *ui, const char *code)
         usleep(20000);
     }
 
+    start_time = time(NULL);
+
     while (1)
     {
+        if (g_pickup_notify_flag)
+        {
+            break;
+        }
+
+        if ((time(NULL) - start_time) >= PAGE_TIMEOUT_SEC)
+        {
+            printf("[超时] 取件码页面超时(%d秒)，自动返回\n", PAGE_TIMEOUT_SEC);
+            break;
+        }
+
         if (touchpad_get_coord(&ui->touch, &ts_x, &ts_y) == 0)
         {
             if (ts_x >= 17 && ts_x <= 62 && ts_y >= 427 && ts_y <= 472)
@@ -288,6 +305,12 @@ int show_takeout_success(ui_context_t *ui)
 
     while (1)
     {
+        if (g_pickup_notify_flag)
+        {
+            printf("[扫码取件] 取件成功页面检测到扫码通知，中断\n");
+            return 0;
+        }
+
         if ((time(NULL) - start_time) >= PAGE_TIMEOUT_SEC)
         {
             printf("[超时] 取件成功页面显示超时(%d秒)，自动返回主页\n", PAGE_TIMEOUT_SEC);

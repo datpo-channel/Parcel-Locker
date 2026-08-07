@@ -122,28 +122,6 @@ locker_node_t *locker_find_by_code(locker_node_t *head, const char *locker_getID
     return NULL;
 }
 
-locker_node_t *locker_find_by_token(locker_node_t *head, const char *token)
-{
-    locker_node_t *current = head;
-
-    if (token == NULL || token[0] == '\0')
-    {
-        return NULL;
-    }
-
-    while (current != NULL)
-    {
-        if (current->loc_data == LOCKER_OCCUPIED &&
-            strcmp(current->pickup_token, token) == 0)
-        {
-            return current;
-        }
-        current = current->next;
-    }
-
-    return NULL;
-}
-
 int locker_update_status(locker_node_t *node, int loc_data)
 {
     if (node == NULL)

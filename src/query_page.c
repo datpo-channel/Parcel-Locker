@@ -20,6 +20,15 @@
 /**************************************************************************
  *
  *   @brief : 重绘查询界面，恢复已输入的数字显示
+ *   @arg   : ui            指向 ui_context_t 结构体的指针
+ *   @arg   : phone_digits  手机号数字数组
+ *   @arg   : phone_count   手机号已输入位数
+ *   @arg   : code_digits   验证码数字数组
+ *   @arg   : code_count    验证码已输入位数
+ *   @arg   : phone_x/y/step 手机号显示坐标和步长
+ *   @arg   : code_x/y/step  验证码显示坐标和步长
+ *
+ *   @retval: 无
  *
  ***************************************************************************/
 static void redraw_query(ui_context_t *ui,
@@ -44,6 +53,13 @@ static void redraw_query(ui_context_t *ui,
  *
  *   @brief : 快件查询界面
  *          点击输入框弹出键盘，点击确认/键盘外收起键盘
+ *   @arg   : ui  指向 ui_context_t 结构体的指针
+ *
+ *   @retval: RET_QUERY_OK     查询成功
+ *            RET_QUERY_BACK   用户返回
+ *            RET_TIMEOUT      页面超时
+ *            RET_LOGIN_FAILED 验证码错误次数超限
+ *            RET_SCAN_PICKUP  后台检测到扫码取件
  *
  *   坐标布局：
  *     返回键          (19-67, 430-477)
@@ -258,6 +274,11 @@ int show_received_query(ui_context_t *ui)
             time_t result_start = time(NULL);
             while (1)
             {
+                if (g_pickup_notify_flag)
+                {
+                    return RET_SCAN_PICKUP;
+                }
+
                 if (time(NULL) - result_start > 30)
                 {
                     printf("[查询] 结果页超时，返回主页\n");

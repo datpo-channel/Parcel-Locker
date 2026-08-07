@@ -15,8 +15,6 @@
 #include "qr_jpeg.h"
 
 #define MAX_RETRY_COUNT  3
-#define SCAN_PICKUP_POLL_INTERVAL_SEC  3
-#define SCAN_PICKUP_POLL_TIMEOUT_SEC   300
 
 char g_pickup_token[VG_TOKEN_LEN];
 
@@ -67,6 +65,12 @@ static int check_scan_pickup(ui_context_t *ui)
             memset(g_pickup_token, 0, sizeof(g_pickup_token));
             return 0;
         }
+        if (st == VG_STATUS_OPENED)
+        {
+            printf("[扫码取件] 取件令牌已开箱，本地清理\n");
+            memset(g_pickup_token, 0, sizeof(g_pickup_token));
+            return 0;
+        }
     }
 
     node = head;
@@ -86,6 +90,12 @@ static int check_scan_pickup(ui_context_t *ui)
                     locker_clean_by_id(head, node->locker_ID);
                     show_takeout_success(ui);
                     return 1;
+                }
+                else
+                {
+                    printf("[扫码取件] 票据消费失败(返回%d)，柜号:%s，清理令牌\n",
+                           cr, node->locker_ID);
+                    memset(node->pickup_token, 0, VG_TOKEN_LEN);
                 }
             }
             else if (st == VG_STATUS_OPENED)
@@ -296,14 +306,16 @@ int main(void)
 
                         if (ret == RET_LOGIN_FAILED)
                         {
-                            user_login_retry++;
-                            if (user_login_retry >= MAX_RETRY_COUNT)
-                            {
-                                printf("[错误] 用户登录流程已重试%d次，验证码多次错误，返回主页\n", MAX_RETRY_COUNT);
-                                break;
-                            }
-                            printf("验证码错误次数过多（第%d次登录流程），请重新开始\n", user_login_retry + 1);
-                            continue;
+                            printf("[安全] 验证码错误次数过多，返回主页\n");
+                            break;
+                        }
+
+                        if (ret == RET_SCAN_PICKUP)
+                        {
+                            g_pickup_notify_flag = 0;
+                            printf("[扫码取件] 登录界面检测到验证完成，执行开箱\n");
+                            check_scan_pickup(&ui);
+                            break;
                         }
 
                         if (ret != 0)
@@ -418,14 +430,16 @@ int main(void)
 
                         if (ret == RET_LOGIN_FAILED)
                         {
-                            courier_login_retry++;
-                            if (courier_login_retry >= MAX_RETRY_COUNT)
-                            {
-                                printf("[错误] 快递员登录流程已重试%d次，验证码多次错误，返回主页\n", MAX_RETRY_COUNT);
-                                break;
-                            }
-                            printf("验证码错误次数过多（第%d次登录流程），请重新开始\n", courier_login_retry + 1);
-                            continue;
+                            printf("[安全] 验证码错误次数过多，返回主页\n");
+                            break;
+                        }
+
+                        if (ret == RET_SCAN_PICKUP)
+                        {
+                            g_pickup_notify_flag = 0;
+                            printf("[扫码取件] 登录界面检测到验证完成，执行开箱\n");
+                            check_scan_pickup(&ui);
+                            break;
                         }
 
                         if (ret != 0)
@@ -519,6 +533,14 @@ int main(void)
                     if (ret == RET_LOGIN_FAILED)
                     {
                         printf("[安全] 验证码错误次数过多，返回主页\n");
+                        break;
+                    }
+
+                    if (ret == RET_SCAN_PICKUP)
+                    {
+                        g_pickup_notify_flag = 0;
+                        printf("[扫码取件] 查询界面检测到验证完成，执行开箱\n");
+                        check_scan_pickup(&ui);
                         break;
                     }
 
