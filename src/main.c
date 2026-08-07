@@ -13,6 +13,8 @@
 #include "locker_info.h"
 #include "verify_gate.h"
 #include "qr_jpeg.h"
+#include "ntp_client.h"
+#include "weather_utils.h"
 
 #define MAX_RETRY_COUNT  3
 
@@ -158,6 +160,14 @@ int main(void)
 
     lcd_cache_init();
     lcd_preload_common_images();
+
+    printf("正在同步网络时间...\n");
+    ntp_sync();
+
+    if (weather_time_init() != 0)
+    {
+        printf("[警告] 天气模块初始化失败，时间功能不可用\n");
+    }
 
     ui_start_pickup_watcher();
 
@@ -578,6 +588,7 @@ int main(void)
 
     ui_stop(&ui);
     lcd_cache_cleanup();
+    weather_time_cleanup();
     close(touch_fd);
 
     return 0;

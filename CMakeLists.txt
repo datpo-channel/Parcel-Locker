@@ -15,10 +15,13 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(JPEG_INCLUDE_PATH "/home/gec/Worksapce/jpegsrc.v9f/jpeg-9f/include")
+set(FREETYPE_INCLUDE_PATH "/home/gec/freetype-2.14.3/include")
+set(FREETYPE_LIB_PATH "/home/gec/freetype-2.14.3/objs/.libs")
 
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${JPEG_INCLUDE_PATH}
+    ${FREETYPE_INCLUDE_PATH}
 )
 
 link_directories(${CMAKE_SOURCE_DIR}/lib)
@@ -32,8 +35,10 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME}
     ${CMAKE_SOURCE_DIR}/lib/libjpeg.a
     ${CMAKE_SOURCE_DIR}/lib/libqrencode.a
+    ${FREETYPE_LIB_PATH}/libfreetype.a
     pthread
     m
+    dl
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

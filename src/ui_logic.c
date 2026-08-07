@@ -6,6 +6,7 @@
 #include "utils.h"
 #include "ad_player.h"
 #include "pickup_monitor.h"
+#include "weather_utils.h"
 
 static locker_node_t *g_locker_head = NULL;
 static user_node_t   *g_user_head   = NULL;
@@ -148,6 +149,8 @@ int show_main_menu(ui_context_t *ui)
 {
     int ts_x, ts_y;
     int ret = 0;
+    time_t last_update = 0;
+    time_t now;
 
     if (ui == NULL)
     {
@@ -157,12 +160,27 @@ int show_main_menu(ui_context_t *ui)
     lcd_show_menu(&ui->lcd, "main_menu.jpg");
     start_ad_player(ui);
 
+    time(&now);
+
+    last_update = now;
+
     while (1)
     {
         if (g_pickup_notify_flag)
         {
             stop_ad_player(ui);
             return RET_SCAN_PICKUP;
+        }
+
+        time(&now);
+        if (now != last_update)
+        {
+            int cx, cy;
+            for (cy = 260; cy < 480; cy++)
+                for (cx = 0; cx < 90; cx++)
+                    ui->lcd.fb[cy * LCD_WIDTH + cx] = 0x000A5F39;
+            weather_time_draw(&ui->lcd, 20, 460);
+            last_update = now;
         }
 
         if (touchpad_get_coord(&ui->touch, &ts_x, &ts_y) == 0)
