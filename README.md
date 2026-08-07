@@ -601,6 +601,10 @@ cd /opt/mail-box-api && node index.js &
 - 扫码轮询：`src/main.c` 中 `SCAN_PICKUP_POLL_TIMEOUT_SEC` 宏
 </details>
 
+## 特别鸣谢
+
+- [https://github.com/songzixianyu](https://github.com/songzixianyu)
+
 ## License
 
 MIT
