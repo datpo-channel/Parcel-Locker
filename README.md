@@ -605,6 +605,3 @@ cd /opt/mail-box-api && node index.js &
 
 - [songzixianyu](https://github.com/songzixianyu)
 
-## License
-
-MIT
