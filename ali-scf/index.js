@@ -233,7 +233,8 @@ function render() {
             });
             const data = await resp.json();
             if (data.success) {
-                app.innerHTML = '<div class="result"><div class="result-icon success">✅</div><h2>验证成功</h2><p>箱门即将打开，请取走包裹</p></div>';
+                app.innerHTML = '<div class="result"><div class="result-icon success">✅</div><h2>验证成功</h2><p>箱门即将打开，请取走包裹</p><div id="remainingBox"></div></div>';
+                pollRemaining();
             } else {
                 showStatus(data.error || "验证失败", "error");
                 verifyBtn.disabled = false;
@@ -245,6 +246,31 @@ function render() {
             verifyBtn.innerHTML = '验证并取件';
         }
     };
+}
+
+async function pollRemaining() {
+    const box = document.getElementById('remainingBox');
+    if (!box) return;
+
+    const check = async () => {
+        try {
+            const resp = await fetch('/api/status?token=' + token);
+            const data = await resp.json();
+            if (data.remaining && data.remaining.length > 0) {
+                let html = '<div style="margin-top:20px;text-align:left"><h3 style="font-size:16px;color:#333;margin-bottom:12px">📦 剩余未取包裹</h3>';
+                data.remaining.forEach(function(pkg) {
+                    html += '<div style="background:#f6f8fa;border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><span style="font-weight:600;color:#1a1a1a">柜号 ' + pkg.lockerId + '</span><span style="color:#666;font-size:14px">取件码 <b style="color:#1677ff;font-size:16px">' + pkg.code + '</b></span></div>';
+                });
+                html += '</div>';
+                box.innerHTML = html;
+                if (data.opened) return;
+            }
+            setTimeout(check, 2000);
+        } catch(e) {
+            setTimeout(check, 3000);
+        }
+    };
+    setTimeout(check, 1000);
 }
 
 render();
@@ -313,11 +339,46 @@ const server = http.createServer(async (req, res) => {
             sendJSON(res, 200, {
                 verified: true,
                 phone: record.phone,
-                verifiedAt: record.createdAt
+                verifiedAt: record.createdAt,
+                remaining: record.remaining || []
+            });
+        } else if (record && record.status === 'opened') {
+            sendJSON(res, 200, {
+                verified: true,
+                phone: record.phone,
+                verifiedAt: record.createdAt,
+                remaining: record.remaining || [],
+                opened: true
             });
         } else {
             sendJSON(res, 200, { verified: false });
         }
+        return;
+    }
+
+    if (pathname === '/api/update-remaining' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const { token, remaining } = body;
+
+        if (!token) {
+            sendJSON(res, 400, { error: '缺少token参数' });
+            return;
+        }
+
+        const data = loadData();
+        const record = data[token];
+
+        if (!record) {
+            sendJSON(res, 404, { error: '令牌不存在' });
+            return;
+        }
+
+        record.remaining = remaining || [];
+        record.status = 'opened';
+        saveData(data);
+
+        console.log('[更新剩余包裹] Token:', token, '剩余:', JSON.stringify(remaining));
+        sendJSON(res, 200, { success: true });
         return;
     }
 

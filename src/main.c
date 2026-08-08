@@ -53,12 +53,40 @@ static int check_scan_pickup(ui_context_t *ui)
                     printf("[扫码取件] 验证通过，柜号:%s 手机:%s\n",
                            node->locker_ID, status.verified_phone);
                     locker_clean_by_id(head, node->locker_ID);
-                    opened++;
+                    opened = 1;
+                    break;
                 }
                 node = node->next;
             }
             if (opened > 0)
             {
+                char remaining_json[2048] = "[";
+                int has_remaining = 0;
+                node = head;
+                while (node != NULL)
+                {
+                    if (node->loc_data == LOCKER_OCCUPIED &&
+                        strcmp(node->small_phone, status.verified_phone) == 0)
+                    {
+                        char entry[128];
+                        snprintf(entry, sizeof(entry),
+                                 "%s{\"lockerId\":\"%s\",\"code\":\"%s\"}",
+                                 has_remaining ? "," : "",
+                                 node->locker_ID, node->locker_getID);
+                        strncat(remaining_json, entry,
+                                sizeof(remaining_json) - strlen(remaining_json) - 1);
+                        has_remaining = 1;
+                    }
+                    node = node->next;
+                }
+                strncat(remaining_json, "]",
+                        sizeof(remaining_json) - strlen(remaining_json) - 1);
+
+                if (has_remaining)
+                {
+                    vg_update_remaining(g_pickup_token, remaining_json);
+                }
+
                 show_takeout_success(ui);
                 memset(g_pickup_token, 0, sizeof(g_pickup_token));
                 return 1;
@@ -87,9 +115,43 @@ static int check_scan_pickup(ui_context_t *ui)
                 int cr = vg_consume_ticket(node->pickup_token, vphone, sizeof(vphone));
                 if (cr == 1)
                 {
+                    char saved_token[VG_TOKEN_LEN];
+                    strncpy(saved_token, node->pickup_token, VG_TOKEN_LEN - 1);
+                    saved_token[VG_TOKEN_LEN - 1] = '\0';
+
                     printf("[扫码取件] 验证通过，柜号:%s 手机:%s\n",
                            node->locker_ID, vphone[0] ? vphone : "未知");
                     locker_clean_by_id(head, node->locker_ID);
+
+                    if (vphone[0] != '\0')
+                    {
+                        char remaining_json[2048] = "[";
+                        int has_remaining = 0;
+                        locker_node_t *rn = head;
+                        while (rn != NULL)
+                        {
+                            if (rn->loc_data == LOCKER_OCCUPIED &&
+                                strcmp(rn->small_phone, vphone) == 0)
+                            {
+                                char entry[128];
+                                snprintf(entry, sizeof(entry),
+                                         "%s{\"lockerId\":\"%s\",\"code\":\"%s\"}",
+                                         has_remaining ? "," : "",
+                                         rn->locker_ID, rn->locker_getID);
+                                strncat(remaining_json, entry,
+                                        sizeof(remaining_json) - strlen(remaining_json) - 1);
+                                has_remaining = 1;
+                            }
+                            rn = rn->next;
+                        }
+                        strncat(remaining_json, "]",
+                                sizeof(remaining_json) - strlen(remaining_json) - 1);
+                        if (has_remaining)
+                        {
+                            vg_update_remaining(saved_token, remaining_json);
+                        }
+                    }
+
                     show_takeout_success(ui);
                     return 1;
                 }

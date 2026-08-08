@@ -67,4 +67,18 @@ int vg_query_status(const char *token, vg_status_t *status);
  ***************************************************************************/
 int vg_consume_ticket(const char *token, char *out_phone, size_t phone_size);
 
+/**************************************************************************
+ *
+ *   @brief : 更新取件令牌的剩余包裹信息
+ *   @arg   : token      取件令牌
+ *   @arg   : remaining  剩余包裹JSON数组字符串，如 "[{\"lockerId\":\"A01\",\"code\":\"1234\"}]"
+ *
+ *   @retval: 0  成功
+ *           -1 参数错误
+ *           -2 网络请求失败
+ *   @note  : 开箱后调用，网页端通过 /api/status 轮询获取剩余包裹
+ *
+ ***************************************************************************/
+int vg_update_remaining(const char *token, const char *remaining_json);
+
 #endif

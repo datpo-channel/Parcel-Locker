@@ -6,8 +6,8 @@
 #include <time.h>
 #include <errno.h>
 
-#define VG_BUFSIZE   4096
-#define VG_CMD_SIZE  1024
+#define VG_BUFSIZE   8192
+#define VG_CMD_SIZE  8192
 
 static const char *VG_API_KEY = "";
 static const char *vg_api_base_url = "http://8.148.211.45:3000";
@@ -497,6 +497,38 @@ int vg_consume_ticket(const char *token, char *out_phone, size_t phone_size)
         }
     }
     else
+    {
+        ret = 0;
+    }
+
+    free(resp);
+    return ret;
+}
+
+int vg_update_remaining(const char *token, const char *remaining_json)
+{
+    char body[VG_TOKEN_LEN + 2048];
+    char *resp;
+    int success;
+    int ret = -2;
+
+    if (token == NULL || token[0] == '\0' || remaining_json == NULL)
+    {
+        return -1;
+    }
+
+    snprintf(body, sizeof(body),
+             "{\"token\":\"%s\",\"remaining\":%s}",
+             token, remaining_json);
+
+    resp = vg_http_request("POST", "/api/update-remaining", body);
+    if (resp == NULL)
+    {
+        return -2;
+    }
+
+    success = json_find_bool(resp, "success");
+    if (success == 1)
     {
         ret = 0;
     }
