@@ -2,6 +2,14 @@
 
 基于 GEC6818 嵌入式平台的智能快递柜，支持快递员存件、用户取件、扫码取件、短信验证等功能。采用 **C 语言嵌入式端 + Node.js 云端服务** 的架构。
 
+## 特别鸣谢
+
+### 共同创作者
+
+- [songzixianyu](https://github.com/songzixianyu)
+- [nabana666](https://github.com/nabana666)
+- [q-rgb](https://github.com/q-rgb)
+
 ## 系统架构
 
 ```
@@ -601,8 +609,3 @@ cd /opt/mail-box-api && node index.js &
 - 扫码轮询：`src/main.c` 中 `SCAN_PICKUP_POLL_TIMEOUT_SEC` 宏
 </details>
 
-## 特别鸣谢
-
-- [songzixianyu](https://github.com/songzixianyu)
-- [nabana666](https://github.com/nabana666)
-- [q-rgb](https://github.com/q-rgb)
