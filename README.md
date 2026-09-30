@@ -1,6 +1,6 @@
 # Parcel Locker — 仓库说明
 
-本仓库包含同一套 GEC6818 智能快递柜系统的**两个实现版本**：
+本仓库包含同一套 RK3568 智能快递柜系统的**两个实现版本**：
 
 ```
 Parcel-Locker/
@@ -32,7 +32,7 @@ Parcel-Locker/
 
 ### 两者共同点
 
-- 目标平台相同：GEC6818 开发板（ARM 交叉编译，`arm-linux-gcc`）
+- 目标平台相同：RK3568 开发板（ARM 交叉编译，`arm-linux-gcc`）
 - 构建方式相同：CMake + `lib/` 下的预编译库（libjpeg、libqrencode）
 - 云端服务同名同源：`ali-scf/`（Node.js）
 - 业务功能一致：快递员存件、用户取件、扫码取件、短信验证、快件查询、广告轮播
