@@ -29,48 +29,6 @@ Parcel-Locker/
 | 编译选项 | `-Wall -Wextra` | `-O2 -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare` |
 | 云端 `ali-scf/` | 较旧版本 | 较新版本（多出 `/sms_key` 频率限制、管理员 Token 校验、`remaining`/`opened` 剩余包裹上报） |
 
-### 源文件差异（`src/`）
-
-仅 `mail_box_pic/` 存在（8 个）：
-
-```
-ad_player.c   http_client.c   keyboard_input.c   lcd_ui_display.c
-locker_info.c ntp_client.c    touchpad.c         user_info.c
-```
-
-仅 `mail_box_LVGL/` 存在（10 个）：
-
-```
-data_store.c     display.c        input.c          net_client.c
-lvgl_login_page.c        lvgl_main_menu.c      lvgl_overlay_page.c
-lvgl_query_page.c        lvgl_store_page.c     lvgl_takeout_page.c
-```
-
-两边同名但**内容不同**的源文件（11 个）：
-
-```
-login_page.c   main.c             pickup_monitor.c   qr_jpeg.c
-query_page.c   sms.c              store_page.c       takeout_page.c
-ui_logic.c     verify_gate.c      weather_utils.c
-```
-
-### 头文件差异（`include/`）
-
-仅 `mail_box_pic/` 存在（9 个）：
-
-```
-ad_player.h    http_client.h  keyboard_input.h  lcd_ui_display.h
-locker_info.h  ntp_client.h   thread_safe.h     touchpad.h   user_info.h
-```
-
-仅 `mail_box_LVGL/` 存在（15 个）：
-
-```
-custom_tick.h  data_store.h   display.h      input.h        main.h
-net_client.h   ui_layout.h    lv_conf.h      lv_drv_conf.h
-lvgl_login_page.h       lvgl_main_menu.h      lvgl_overlay_page.h
-lvgl_query_page.h       lvgl_store_page.h     lvgl_takeout_page.h
-```
 
 ### 两者共同点
 
@@ -83,8 +41,6 @@ lvgl_query_page.h       lvgl_store_page.h     lvgl_takeout_page.h
 > 不能简单用其中一个目录覆盖另一个。
 
 ---
-
-> 以下为 `mail_box_pic/README.md` 的原文副本，其内部路径描述均相对于 `mail_box_pic/` 目录。
 
 # Parcel Locker — 智能快递柜系统
 
