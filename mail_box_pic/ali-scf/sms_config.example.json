@@ -1,0 +1,4 @@
+{
+    "password": "请替换为你的互亿无线API密码",
+    "auth_token": "请替换为随机字符串，与设备端KEY_SERVER_TOKEN保持一致"
+}

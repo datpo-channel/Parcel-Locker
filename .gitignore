@@ -1,4 +1,3 @@
 build/
 *.o
-mail_box_pic
 sms_config.json
